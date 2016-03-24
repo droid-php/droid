@@ -1,0 +1,26 @@
+build:
+    name: "Building it"
+    steps:
+        composer_install:
+            prefer: dist
+        bower_install: ~
+cs:
+    requires:
+        - build
+    steps:
+        phpcs: ~
+
+test:
+    requires:
+        - build
+        - cs
+    steps:
+        phpunit: ~
+    
+deploy:
+    requires:
+        - build
+    steps:
+        deploy_ssh:
+            hosts: "{{ deploy.hosts }}"
+            sshkey: "{{ deploy.sshkey }}"
