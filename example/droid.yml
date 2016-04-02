@@ -1,26 +1,49 @@
-build:
-    name: "Building it"
-    steps:
-        composer_install:
-            prefer: dist
-        bower_install: ~
-cs:
-    requires:
-        - build
-    steps:
-        phpcs: ~
-
-test:
-    requires:
-        - build
-        - cs
-    steps:
-        phpunit: ~
+project:
+    name: Droid Example
     
-deploy:
-    requires:
-        - build
-    steps:
-        deploy_ssh:
-            hosts: "{{ deploy.hosts }}"
-            sshkey: "{{ deploy.sshkey }}"
+parameters:
+    composer_path: /usr/bin/composer
+    composer_path: /usr/bin/composer
+
+register:
+    - Haigha\Command\LoadCommand: ~
+    
+targets:
+    default:
+        name: "Building it"
+        steps:
+            - "composer:install":
+                prefer: dist
+            - "bower:install": ~
+            
+    hello:
+        name: "Hello target"
+        requires:
+            - build
+        steps:
+            - "core:echo":
+                message: "Hello world from the echo task!"
+            - "core:echo":
+                message: "This should be in red"
+                color: "red"
+
+    cs:
+        requires:
+            - build
+        steps:
+            - phpcs: ~
+
+    test:
+        requires:
+            - build
+            - cs
+        steps:
+            - phpunit: ~
+        
+    deploy:
+        requires:
+            - build
+        steps:
+            - deploy_ssh:
+                hosts: %deploy_hosts%
+                sshkey: %deploy_sshkey%

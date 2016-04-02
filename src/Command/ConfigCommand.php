@@ -6,8 +6,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Droid\Droid;
-use Droid\Loader\YamlConfigLoader;
+use Droid\Project;
+use Droid\Loader\YamlProjectLoader;
 
 class ConfigCommand extends Command
 {
@@ -17,7 +17,7 @@ class ConfigCommand extends Command
         $this
             ->setName('config')
             ->setDescription(
-                'Show configuration'
+                'Show project configuration'
             )
         ;
     }
@@ -26,31 +26,23 @@ class ConfigCommand extends Command
     {
 
         $output->writeln("Droid configuration:");
-        $filename = $this->getDroidFilename();
-        $output->writeln(" - Filename: " . $filename);
-        
-        
-        $droid = new Droid($filename);
-        $droid->addTask(new \Droid\Task\EchoTask());
-        
-        $loader = new YamlConfigLoader();
-        $loader->load($droid, $filename);
-        
+        $project = $this->getApplication()->getProject();
+
         $output->writeln("Targets: ");
         
-        foreach ($droid->getTargets() as $target) {
+        foreach ($project->getTargets() as $target) {
             $output->writeln(" - " . $target->getName());
             $output->writeln("     Steps:");
             foreach ($target->getSteps() as $step) {
-                $output->writeln("     - " . $step->getTaskName());
+                $output->writeln("     - " . $step->getCommandName());
+                $parameters = $step->getParameters();
+                if ($parameters) {
+                    foreach ($parameters as $key => $value) {
+                        $output->writeln("        * $key = `$value`");
+                    }
+                }
             }
         }
         $output->writeln("Done: ");
-    }
-    
-    public function getDroidFilename()
-    {
-        $filename = __DIR__ . '/../../example/droid.yml';
-        return $filename;
     }
 }

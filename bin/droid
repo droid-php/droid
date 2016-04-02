@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-use Symfony\Component\Console\Application;
+use Droid\Application;
 
 $loader = __DIR__ . '/../vendor/autoload.php';
 
@@ -19,8 +19,5 @@ if (!file_exists($loader)) {
 
 require $loader;
 
-$application = new Application('Droid Console Tool', '1.0.0');
-$application->setCatchExceptions(true);
-$application->add(new \Droid\Command\RunCommand());
-$application->add(new \Droid\Command\ConfigCommand());
+$application = new Application();
 $application->run();

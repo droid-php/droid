@@ -3,11 +3,11 @@
 namespace Droid\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Droid\Droid;
-use Droid\Loader\YamlConfigLoader;
+use RuntimeException;
 
 class RunCommand extends Command
 {
@@ -31,24 +31,69 @@ class RunCommand extends Command
     {
         $target = $input->getArgument('target');
         if (!$target) {
-            $target = 'build';
+            $target = 'default';
         }
-        $output->writeln("Running target `$target`");
-        $filename = $this->getDroidFilename();
+        $output->writeln("<info>Droid: Running target `$target`</info>");
+        $project = $this->getApplication()->getProject();
         
-        $droid = new Droid($filename);
-        $droid->addTask(new \Droid\Task\EchoTask());
-        
-        $loader = new YamlConfigLoader();
-        $loader->load($droid, $filename);
-        
-        $res = $droid->runTarget($target);
+        $res = $this->runTarget($project, $target, $input, $output);
         $output->writeln("Done: " . $res);
     }
     
-    public function getDroidFilename()
+    public function runTarget($project, $targetName, $input, $output)
     {
-        $filename = __DIR__ . '/../../example/droid.yml';
-        return $filename;
+        $target = $project->getTargetByName($targetName);
+        if (!$target) {
+            throw new RuntimeException("Target not found: " . $targetName);
+        }
+        
+        foreach ($target->getSteps() as $step) {
+            $params = '';
+            foreach ($step->getParameters() as $key => $value) {
+                $params .= $key . '=' . $value . ' ';
+            }
+            $output->writeln("<comment> * Step: " . $step->getCommandName() ." " . trim($params) . "</comment>");
+            //$command = $this->getCommandByName($step->getCommandName());
+            
+            $command = $this->getApplication()->find($step->getCommandName());
+            if (!$command) {
+                throw new RuntimeException("Unsupported command: " . $step->getCommandName());
+            }
+            //$command->verifyParameters($step->getParameters());
+
+            $arguments = [];
+            $arguments['command'] = $step->getCommandName();
+            
+            $definition = $command->getDefinition();
+            //print_r($definition);
+            foreach ($definition->getArguments() as $argument) {
+                $name = $argument->getName();
+                if ($name!='command') {
+                    if ($step->hasParameter($name)) {
+                        $arguments[$name]=$step->getParameter($name);
+                    } else {
+                        if ($argument->isRequired()) {
+                            throw new RuntimeException("Missing required argument: " . $name);
+                        }
+                    }
+                }
+                //print_r($argument);
+            }
+
+            foreach ($definition->getOptions() as $option) {
+                $name = $option->getName();
+                if ($step->hasParameter($name)) {
+                    $arguments['--' . $name]=$step->getParameter($name);
+                }
+            }
+            
+            $commandInput = new ArrayInput($arguments);
+            //print_r($commandInput);
+            $res = $command->run($commandInput, $output);
+            if ($res) {
+                throw new RuntimeException("Step failed: " . $command->getName());
+            }
+        }
+        return true;
     }
 }
