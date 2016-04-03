@@ -32,13 +32,17 @@ class ConfigCommand extends Command
         
         foreach ($project->getTargets() as $target) {
             $output->writeln(" - " . $target->getName());
-            $output->writeln("     Steps:");
-            foreach ($target->getSteps() as $step) {
-                $output->writeln("     - " . $step->getCommandName());
-                $parameters = $step->getParameters();
+            $output->writeln("     Tasks:");
+            foreach ($target->getTasks() as $task) {
+                $output->writeln("     - " . $task->getCommandName());
+                $parameters = $task->getParameters();
                 if ($parameters) {
                     foreach ($parameters as $key => $value) {
-                        $output->writeln("        * $key = `$value`");
+                        if (!is_array($value)) {
+                            $output->writeln("        * $key = `$value`");
+                        } else {
+                            $output->writeln("        * $key = [array]");
+                        }
                     }
                 }
             }

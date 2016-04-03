@@ -30,21 +30,21 @@ Create a `droid.yml` file in the root of your repository. For example:
 targets:
    default:
       name: "Building it"
-      steps:
+      tasks:
          - "composer:install":
             prefer: dist
          - "bower:install": ~
    cs:
       requires:
          - default
-      steps:
+      tasks:
          - "phpcs:check": ~
 
    test:
       requires:
          - build
          - cs
-      steps:
+      tasks:
          - "phpunit:test": ~
     
    deploy:
@@ -58,7 +58,7 @@ targets:
             host: app2.example.com
             port: 2222
 
-      steps:
+      tasks:
          - "deploy:ssh":
             sshkey: "{{ deploy.sshkey }}"
             basepath: "/code/myapp/"
@@ -66,7 +66,7 @@ targets:
 
 At the top level, you define the "targets". When you run droid, you always pass a target name. It uses target name "default" if none is specified.
 
-For each target, you can define a set of "steps". Each step has a command name (for example "core:echo") and a list of arguments for that command.
+For each target, you can define a set of "tasks". Each task has a command name (for example "core:echo") and a list of arguments for that command.
 
 ## Running droid
 
@@ -99,7 +99,7 @@ register:
     - Haigha\Command\LoadCommand: ~
 ```
 
-When you list the available commands, you'll find that [Haiga's](http://github.com/linkorb/haigha) `fixture:load` command has been added to the available command list. You can now use it as a command in your target steps.
+When you list the available commands, you'll find that [Haiga's](http://github.com/linkorb/haigha) `fixture:load` command has been added to the available command list. You can now use it as a command in your target tasks.
 
 If you'd like to change the default 'name' for the registered command, simply pass a name parameter:
 
@@ -156,7 +156,7 @@ This will list the available arguments and options available in the `core:echo` 
 You can simply add these arguments in your `droid.yml` file like this:
 
 ```yml
-   steps:
+   tasks:
       - "core:echo":
          message: "Hello world from the echo task!"
       - "core:echo":
@@ -166,11 +166,12 @@ You can simply add these arguments in your `droid.yml` file like this:
 
 When you're trying to use a command, and forget to specify any *required* arguments, droid will tell you what's missing.
 
-## TODO / Next steps:
+## TODO:
 
-* [ ] Finish core classes (this is WIP!)
+* [ ] Finish core commands (this is WIP!)
 * [ ] Implement a set of commands, for running composer, bower, deploy and other functionality
-* [ ] Implement tasks for building docker containers
+* [ ] Split core commands into droid-plugin repositories
+* [ ] Implement commands for building docker containers
 
 ## License
 

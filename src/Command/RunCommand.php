@@ -47,30 +47,30 @@ class RunCommand extends Command
             throw new RuntimeException("Target not found: " . $targetName);
         }
         
-        foreach ($target->getSteps() as $step) {
+        foreach ($target->getTasks() as $task) {
             $params = '';
-            foreach ($step->getParameters() as $key => $value) {
+            foreach ($task->getParameters() as $key => $value) {
                 $params .= $key . '=' . $value . ' ';
             }
-            $output->writeln("<comment> * Step: " . $step->getCommandName() ." " . trim($params) . "</comment>");
-            //$command = $this->getCommandByName($step->getCommandName());
+            $output->writeln("<comment> * Task: " . $task->getCommandName() ." " . trim($params) . "</comment>");
+            //$command = $this->getCommandByName($task->getCommandName());
             
-            $command = $this->getApplication()->find($step->getCommandName());
+            $command = $this->getApplication()->find($task->getCommandName());
             if (!$command) {
-                throw new RuntimeException("Unsupported command: " . $step->getCommandName());
+                throw new RuntimeException("Unsupported command: " . $task->getCommandName());
             }
-            //$command->verifyParameters($step->getParameters());
+            //$command->verifyParameters($task->getParameters());
 
             $arguments = [];
-            $arguments['command'] = $step->getCommandName();
+            $arguments['command'] = $task->getCommandName();
             
             $definition = $command->getDefinition();
             //print_r($definition);
             foreach ($definition->getArguments() as $argument) {
                 $name = $argument->getName();
                 if ($name!='command') {
-                    if ($step->hasParameter($name)) {
-                        $arguments[$name]=$step->getParameter($name);
+                    if ($task->hasParameter($name)) {
+                        $arguments[$name]=$task->getParameter($name);
                     } else {
                         if ($argument->isRequired()) {
                             throw new RuntimeException("Missing required argument: " . $name);
@@ -82,8 +82,8 @@ class RunCommand extends Command
 
             foreach ($definition->getOptions() as $option) {
                 $name = $option->getName();
-                if ($step->hasParameter($name)) {
-                    $arguments['--' . $name]=$step->getParameter($name);
+                if ($task->hasParameter($name)) {
+                    $arguments['--' . $name] = $task->getParameter($name);
                 }
             }
             
@@ -91,7 +91,7 @@ class RunCommand extends Command
             //print_r($commandInput);
             $res = $command->run($commandInput, $output);
             if ($res) {
-                throw new RuntimeException("Step failed: " . $command->getName());
+                throw new RuntimeException("Task failed: " . $command->getName());
             }
         }
         return true;

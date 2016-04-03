@@ -5,7 +5,7 @@ namespace Droid\Model;
 class Target
 {
     private $name;
-    private $steps = [];
+    private $tasks = [];
     
     public function __construct($name)
     {
@@ -17,13 +17,13 @@ class Target
         return $this->name;
     }
     
-    public function addStep(Step $step)
+    public function addTask(Task $task)
     {
-        $this->steps[] = $step;
+        $this->tasks[] = $task;
     }
     
-    public function getSteps()
+    public function getTasks()
     {
-        return $this->steps;
+        return $this->tasks;
     }
 }

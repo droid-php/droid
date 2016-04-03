@@ -6,7 +6,7 @@ use Symfony\Component\Yaml\Parser as YamlParser;
 use Droid\Model\Project;
 use Droid\Model\Target;
 use Droid\Model\RegisteredCommand;
-use Droid\Model\Step;
+use Droid\Model\Task;
 use RuntimeException;
 
 class YamlProjectLoader
@@ -29,11 +29,11 @@ class YamlProjectLoader
         foreach ($data['targets'] as $targetName => $targetNode) {
             $target = new Target($targetName);
             $project->addTarget($target);
-            if (isset($targetNode['steps'])) {
-                foreach ($targetNode['steps'] as $stepNodes) {
-                    foreach ($stepNodes as $commandName => $parameters) {
-                        $step = new Step($commandName, $parameters);
-                        $target->addStep($step);
+            if (isset($targetNode['tasks'])) {
+                foreach ($targetNode['tasks'] as $taskNodes) {
+                    foreach ($taskNodes as $commandName => $parameters) {
+                        $task = new Task($commandName, $parameters);
+                        $target->addTask($task);
                     }
                 }
             }

@@ -12,7 +12,7 @@ register:
 targets:
     default:
         name: "Building it"
-        steps:
+        tasks:
             - "composer:install":
                 prefer: dist
             - "bower:install": ~
@@ -21,29 +21,42 @@ targets:
         name: "Hello target"
         requires:
             - build
-        steps:
+        tasks:
             - "core:echo":
                 message: "Hello world from the echo task!"
             - "core:echo":
                 message: "This should be in red"
                 color: "red"
+    looptest:
+        name: "Testing loops"
+        tasks:
+            - "core:echo":
+                $loop:
+                    -
+                        color: red
+                    -
+                        color: green
+                    -
+                        color: blue
+
+                message: "Hello world from the echo task!"
     cs:
         requires:
             - build
-        steps:
+        tasks:
             - phpcs: ~
 
     test:
         requires:
             - build
             - cs
-        steps:
+        tasks:
             - phpunit: ~
         
     deploy:
         requires:
             - build
-        steps:
+        tasks:
             - deploy_ssh:
                 hosts: %deploy_hosts%
                 sshkey: %deploy_sshkey%

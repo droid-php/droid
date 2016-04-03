@@ -4,7 +4,7 @@ namespace Droid\Model;
 
 use InvalidArgumentException;
 
-class Step
+class Task
 {
     private $commandName;
     private $parameters;
