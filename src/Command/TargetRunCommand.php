@@ -26,12 +26,22 @@ class TargetRunCommand extends Command
             )
         ;
     }
+    
+    private $target;
+    
+    public function setTarget($target)
+    {
+        $this->target = $target;
+    }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
         $target = $input->getArgument('target');
         if (!$target) {
             $target = 'default';
+            if ($this->target) {
+                $target = $this->target;
+            }
         }
         $output->writeln("<info>Droid: Running target `$target`</info>");
         $project = $this->getApplication()->getProject();

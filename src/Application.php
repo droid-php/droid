@@ -85,6 +85,17 @@ class Application extends ConsoleApplication
                 }
             }
         }
+        
+        foreach ($this->getProject()->getTargets() as $target) {
+            $command = new \Droid\Command\TargetRunCommand();
+            $command->setName($target->getName());
+            $command->setDescription("Run target: " . $target->getName());
+            $command->setTarget($target->getName());
+            $this->add($command);
+            
+            //print_r($target);
+        }
+        //exit();
     }
     
     public function getDroidFilename()
