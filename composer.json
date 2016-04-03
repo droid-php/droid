@@ -1,8 +1,8 @@
 {
     "name": "droid/droid",
-    "description": "Droid: Build, Test, CI, deploy",
+    "description": "Droid: a Taskrunner to Build, Test, CI, deploy your app",
     "homepage": "http://www.github.com/droid-php/droid",
-    "keywords": ["php", "droid", "build", "ci", "continuous integration", "deploy", "linkorb"],
+    "keywords": ["php", "droid", "taskrunner", "task-runner", "build", "ci", "continuous integration", "deploy", "linkorb"],
     "type": "library",
     "authors": [
         {
