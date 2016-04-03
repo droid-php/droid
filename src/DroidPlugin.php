@@ -14,9 +14,7 @@ class DroidPlugin
         $commands = [];
         $commands[] = new \Droid\Command\TargetRunCommand();
         $commands[] = new \Droid\Command\ConfigCommand();
-        $commands[] = new \Droid\Core\BowerInstallCommand();
-        $commands[] = new \Droid\Core\ComposerInstallCommand();
-        $commands[] = new \Droid\Core\DebugEchoCommand();
+        $commands[] = new \Droid\Command\DebugEchoCommand();
         return $commands;
     }
 }
