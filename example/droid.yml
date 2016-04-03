@@ -41,11 +41,15 @@ targets:
 
                 message: "{{greeting}} {{greet_target}}!"
     cs:
-        requires:
-            - build
         tasks:
             - phpcs: ~
-
+            
+    subtarget:
+        tasks:
+            - "target:run":
+                target: looptest
+            - "target:run":
+                target: echotest
     test:
         requires:
             - build

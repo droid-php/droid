@@ -37,7 +37,8 @@ class TargetRunCommand extends Command
         $project = $this->getApplication()->getProject();
         
         $res = $this->runTarget($project, $target, $input, $output);
-        $output->writeln("Done: " . $res);
+        $output->writeln("Result: " . $res);
+        $output->writeln('--------------------------------------------');
     }
     
     public function runTarget($project, $targetName, $input, $output)
