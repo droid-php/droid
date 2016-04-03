@@ -19,42 +19,50 @@ class YamlProjectLoader
         
         $parser = new YamlParser();
         $data = $parser->parse(file_get_contents($filename));
-        foreach ($data['register'] as $registerNode) {
-            foreach ($registerNode as $className => $parameters) {
-                $command = new RegisteredCommand($className, $parameters);
-                $project->addRegisteredCommand($command);
+        
+        if (isset($data['register'])) {
+            foreach ($data['register'] as $registerNode) {
+                foreach ($registerNode as $className => $parameters) {
+                    $command = new RegisteredCommand($className, $parameters);
+                    $project->addRegisteredCommand($command);
+                }
             }
         }
 
-        foreach ($data['parameters'] as $key => $value) {
-            $project->setParameter($key, $value);
+        if (isset($data['parameters'])) {
+            foreach ($data['parameters'] as $key => $value) {
+                $project->setParameter($key, $value);
+            }
         }
         
-        foreach ($data['targets'] as $targetName => $targetNode) {
-            $target = new Target($targetName);
-            $project->addTarget($target);
-            if (isset($targetNode['tasks'])) {
-                foreach ($targetNode['tasks'] as $taskNodes) {
-                    foreach ($taskNodes as $commandName => $parameters) {
-                        $taskParameters = [];
-                        $loopParameters = null;
-                        if ($parameters) {
-                            foreach ($parameters as $key => $value) {
-                                switch ($key) {
-                                    case '$loop':
-                                        $loopParameters = $value;
-                                        break;
-                                    default:
-                                        $taskParameters[$key] = $value;
-                                        break;
+        
+        if (isset($data['targets'])) {
+            foreach ($data['targets'] as $targetName => $targetNode) {
+                $target = new Target($targetName);
+                $project->addTarget($target);
+                if (isset($targetNode['tasks'])) {
+                    foreach ($targetNode['tasks'] as $taskNodes) {
+                        foreach ($taskNodes as $commandName => $parameters) {
+                            $taskParameters = [];
+                            $loopParameters = null;
+                            if ($parameters) {
+                                foreach ($parameters as $key => $value) {
+                                    switch ($key) {
+                                        case '$loop':
+                                            $loopParameters = $value;
+                                            break;
+                                        default:
+                                            $taskParameters[$key] = $value;
+                                            break;
+                                    }
                                 }
                             }
+                            $task = new Task($commandName, $taskParameters);
+                            if ($loopParameters) {
+                                $task->setLoopParameters($loopParameters);
+                            }
+                            $target->addTask($task);
                         }
-                        $task = new Task($commandName, $taskParameters);
-                        if ($loopParameters) {
-                            $task->setLoopParameters($loopParameters);
-                        }
-                        $target->addTask($task);
                     }
                 }
             }
