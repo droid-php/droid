@@ -8,6 +8,7 @@ class Task
 {
     private $commandName;
     private $parameters;
+    private $loopParameters;
     
     public function __construct($commandName, $parameters = [])
     {
@@ -17,6 +18,21 @@ class Task
         } else {
             $this->parameters=[];
         }
+    }
+    
+    public function setLoopParameters($loopParameters)
+    {
+        $this->loopParameters = $loopParameters;
+    }
+    
+    public function hasLoopParameters()
+    {
+        return isset($this->loopParameters);
+    }
+    
+    public function getLoopParameters()
+    {
+        return $this->loopParameters;
     }
     
     public function getCommandName()

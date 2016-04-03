@@ -2,8 +2,7 @@ project:
     name: Droid Example
     
 parameters:
-    composer_path: /usr/bin/composer
-    composer_path: /usr/bin/composer
+    greet_target: Droid
 
 register:
     - Haigha\Command\LoadCommand:
@@ -17,29 +16,30 @@ targets:
                 prefer: dist
             - "bower:install": ~
             
-    hello:
+    echotest:
         name: "Hello target"
         requires:
             - build
         tasks:
-            - "core:echo":
-                message: "Hello world from the echo task!"
-            - "core:echo":
+            - "debug:echo":
+                message: "Hello {{greet_target}} from the echo task!"
+            - "debug:echo":
                 message: "This should be in red"
                 color: "red"
     looptest:
         name: "Testing loops"
         tasks:
-            - "core:echo":
+            - "debug:echo":
                 $loop:
                     -
-                        color: red
+                        greeting: Hello
                     -
-                        color: green
+                        greeting: Yo
+                        greet_target: dawg
                     -
-                        color: blue
+                        greeting: Whatsup
 
-                message: "Hello world from the echo task!"
+                message: "{{greeting}} {{greet_target}}!"
     cs:
         requires:
             - build

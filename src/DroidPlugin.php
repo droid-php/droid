@@ -12,7 +12,7 @@ class DroidPlugin
     public function getCommands()
     {
         $commands = [];
-        $commands[] = new \Droid\Command\RunCommand();
+        $commands[] = new \Droid\Command\TargetRunCommand();
         $commands[] = new \Droid\Command\ConfigCommand();
         $commands[] = new \Droid\Core\BowerInstallCommand();
         $commands[] = new \Droid\Core\ComposerInstallCommand();

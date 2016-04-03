@@ -31,8 +31,8 @@ class DebugEchoCommand extends Command
     
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        //$output->writeLn("ECHO: " . $input->getArgument('message') . " @ " . $input->getOption('color'));
-        $output->writeLn($input->getArgument('message'));
+        $output->writeLn("ECHO: " . $input->getArgument('message') . " @ " . $input->getOption('color'));
+        //$output->writeLn($input->getArgument('message'));
         //return 0;
     }
 }

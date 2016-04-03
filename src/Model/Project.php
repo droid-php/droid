@@ -10,6 +10,7 @@ class Project
     //private $tasks = [];
     private $targets = [];
     private $registeredCommands = [];
+    private $parameters = [];
     
     public function __construct($filename)
     {
@@ -46,5 +47,29 @@ class Project
             }
         }
         return null;
+    }
+    
+    public function setParameter($name, $value)
+    {
+        $this->parameters[$name] = $value;
+        return $this;
+    }
+    
+    public function hasParameter($name)
+    {
+        return isset($this->parameters[$name]);
+    }
+    
+    public function getParameter($name)
+    {
+        if (!$this->hasParameter($name)) {
+            throw new RuntimeException("No such project parameter: " . $name);
+        }
+        return $this->parameters[$name];
+    }
+    
+    public function getParameters()
+    {
+        return $this->parameters;
     }
 }

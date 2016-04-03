@@ -25,6 +25,10 @@ class YamlProjectLoader
                 $project->addRegisteredCommand($command);
             }
         }
+
+        foreach ($data['parameters'] as $key => $value) {
+            $project->setParameter($key, $value);
+        }
         
         foreach ($data['targets'] as $targetName => $targetNode) {
             $target = new Target($targetName);
@@ -32,7 +36,24 @@ class YamlProjectLoader
             if (isset($targetNode['tasks'])) {
                 foreach ($targetNode['tasks'] as $taskNodes) {
                     foreach ($taskNodes as $commandName => $parameters) {
-                        $task = new Task($commandName, $parameters);
+                        $taskParameters = [];
+                        $loopParameters = null;
+                        if ($parameters) {
+                            foreach ($parameters as $key => $value) {
+                                switch ($key) {
+                                    case '$loop':
+                                        $loopParameters = $value;
+                                        break;
+                                    default:
+                                        $taskParameters[$key] = $value;
+                                        break;
+                                }
+                            }
+                        }
+                        $task = new Task($commandName, $taskParameters);
+                        if ($loopParameters) {
+                            $task->setLoopParameters($loopParameters);
+                        }
                         $target->addTask($task);
                     }
                 }
