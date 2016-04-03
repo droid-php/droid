@@ -1,6 +1,6 @@
 <?php
 
-namespace Droid\Core;
+namespace Droid\Command;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
