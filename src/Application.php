@@ -20,28 +20,17 @@ class Application extends ConsoleApplication
     {
         $this->autoLoader = $autoLoader;
         parent::__construct();
-        
-        $this->getDefinition()->addOptions(
-            [
-                new InputOption(
-                    '--droid-config',
-                    null,
-                    InputOption::VALUE_OPTIONAL,
-                    'The droid config file to use',
-                    null
-                ),
-            ]
-        );
 
         $this->setName('Droid');
         $this->setVersion('1.0.0');
         
-        $input = new ArgvInput();
-
-        // bind the application's input definition to it
-        $input->bind($this->getDefinition());
-
-        $this->droidConfig = $input->getOption('droid-config');
+        // extract --droid-config argument, before interpreting other arguments
+        foreach ($_SERVER['argv'] as $i => $argument) {
+            if (substr($argument, 0, 15)=='--droid-config=') {
+                $this->droidConfig = substr($argument, 15);
+                unset($_SERVER['argv'][$i]);
+            }
+        }
 
         $filename = $this->getDroidFilename();
         $this->project = new Project($filename);
@@ -121,7 +110,7 @@ class Application extends ConsoleApplication
             $filename = getcwd() . '/droid.yml';
         }
         if (!file_exists($filename)) {
-            throw new RuntimeException("Droid configuration not found in " . $filename);
+            exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
         }
         return $filename;
     }
