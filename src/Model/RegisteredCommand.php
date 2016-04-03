@@ -7,12 +7,12 @@ use InvalidArgumentException;
 class RegisteredCommand
 {
     private $className;
-    private $commandName;
+    private $properties;
     
-    public function __construct($className, $commandName = null)
+    public function __construct($className, $properties = [])
     {
         $this->className = $className;
-        $this->commandName = $commandName;
+        $this->properties = $properties;
     }
 
     public function getClassName()
@@ -20,8 +20,20 @@ class RegisteredCommand
         return $this->className;
     }
     
-    public function getCommandName()
+    public function getProperties()
     {
-        return $this->commandName;
+        return $this->properties;
+    }
+    
+    public function hasProperty($name)
+    {
+        return isset($this->properties[$name]);
+    }
+    public function getProperty($name)
+    {
+        if (!$this->hasProperty($name)) {
+            throw new InvalidArgumentException("No such command property: " . $name);
+        }
+        return $this->properties[$name];
     }
 }

@@ -6,8 +6,9 @@ parameters:
     composer_path: /usr/bin/composer
 
 register:
-    - Haigha\Command\LoadCommand: ~
-    
+    - Haigha\Command\LoadCommand:
+        name: "haigha:load"
+        
 targets:
     default:
         name: "Building it"
@@ -26,7 +27,6 @@ targets:
             - "core:echo":
                 message: "This should be in red"
                 color: "red"
-
     cs:
         requires:
             - build

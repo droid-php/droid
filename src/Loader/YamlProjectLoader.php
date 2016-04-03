@@ -21,7 +21,7 @@ class YamlProjectLoader
         $data = $parser->parse(file_get_contents($filename));
         foreach ($data['register'] as $registerNode) {
             foreach ($registerNode as $className => $parameters) {
-                $command = new RegisteredCommand($className);
+                $command = new RegisteredCommand($className, $parameters);
                 $project->addRegisteredCommand($command);
             }
         }

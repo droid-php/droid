@@ -17,7 +17,11 @@ if (!file_exists($loader)) {
     );
 }
 
-require $loader;
+$autoLoader = require($loader);
 
-$application = new Application();
+if (class_exists('AutoTune\Tuner')) {
+    \AutoTune\Tuner::init($autoLoader);
+}
+
+$application = new Application($autoLoader);
 $application->run();
