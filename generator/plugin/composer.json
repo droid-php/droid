@@ -1,0 +1,27 @@
+{
+    "name": "droid/droid-{{name}}",
+    "description": "Droid plugin droid-{{name}}",
+    "homepage": "http://www.github.com/droid-php/droid-{{name}}",
+    "keywords": ["php", "droid", "{{name}}"],
+    "type": "library",
+    "authors": [
+        {
+            "name": "LinkORB Engineering",
+            "email": "engineering@linkorb.com",
+            "role": "Development"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "symfony/console": "~2.7"
+    },
+    "require-dev": {
+        "linkorb/autotune": "~1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Droid\\Plugin\\{{classname}}\\": "src/"
+        }
+    },
+    "license": "MIT"
+}
