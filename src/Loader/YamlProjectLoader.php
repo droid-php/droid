@@ -40,6 +40,9 @@ class YamlProjectLoader
             foreach ($data['targets'] as $targetName => $targetNode) {
                 $target = new Target($targetName);
                 $project->addTarget($target);
+                if (isset($targetNode['hosts'])) {
+                    $target->setHosts($targetNode['hosts']);
+                }
                 if (isset($targetNode['tasks'])) {
                     foreach ($targetNode['tasks'] as $taskNodes) {
                         foreach ($taskNodes as $commandName => $parameters) {

@@ -5,6 +5,7 @@ namespace Droid\Model;
 class Target
 {
     private $name;
+    private $hosts;
     private $tasks = [];
     
     public function __construct($name)
@@ -26,4 +27,16 @@ class Target
     {
         return $this->tasks;
     }
+    
+    public function getHosts()
+    {
+        return $this->hosts;
+    }
+    
+    public function setHosts($hosts)
+    {
+        $this->hosts = $hosts;
+        return $this;
+    }
+    
 }

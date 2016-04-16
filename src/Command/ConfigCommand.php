@@ -32,6 +32,9 @@ class ConfigCommand extends Command
         
         foreach ($project->getTargets() as $target) {
             $output->writeln(" - " . $target->getName());
+            if ($target->getHosts()) {
+                $output->writeln("     Hosts: " . $target->getHosts());
+            }
             $output->writeln("     Tasks:");
             foreach ($target->getTasks() as $task) {
                 $output->writeln("     - " . $task->getCommandName());
