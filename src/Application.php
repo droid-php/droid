@@ -18,6 +18,7 @@ class Application extends ConsoleApplication
     protected $inventory;
     protected $autoLoader;
     protected $droidConfig;
+    protected $inventoryConfig;
     
     public function __construct($autoLoader)
     {
