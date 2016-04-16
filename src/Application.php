@@ -33,9 +33,14 @@ class Application extends ConsoleApplication
         }
 
         $filename = $this->getDroidFilename();
-        $this->project = new Project($filename);
-        $loader = new YamlProjectLoader();
-        $loader->load($this->project, $filename);
+        
+        if (!file_exists($filename)) {
+            //exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
+        } else {
+            $this->project = new Project($filename);
+            $loader = new YamlProjectLoader();
+            $loader->load($this->project, $filename);
+        }
 
         $this->registerCustomCommands();
 
@@ -43,10 +48,15 @@ class Application extends ConsoleApplication
     
     public function getProject()
     {
-        if (!$this->project) {
+        if (!$this->hasProject()) {
             throw new RuntimeException("No project configured");
         }
         return $this->project;
+    }
+    
+    public function hasProject()
+    {
+        return isset($this->project);
     }
     
 
@@ -61,16 +71,18 @@ class Application extends ConsoleApplication
         // which is used when using the --help option
         $defaultCommands = parent::getDefaultCommands();
 
-        // Register commands defined in project's droid.yml
-        foreach ($this->getProject()->getRegisteredCommands() as $registeredCommand) {
-            $className = $registeredCommand->getClassName();
-            $command = new $className();
-            if ($registeredCommand->hasProperty('name')) {
-                $command->setName($registeredCommand->getProperty('name'));
+        if ($this->hasProject()) {
+            // Register commands defined in project's droid.yml
+            foreach ($this->getProject()->getRegisteredCommands() as $registeredCommand) {
+                $className = $registeredCommand->getClassName();
+                $command = new $className();
+                if ($registeredCommand->hasProperty('name')) {
+                    $command->setName($registeredCommand->getProperty('name'));
+                }
+                $this->add($command);
             }
-            $this->add($command);
         }
-        
+            
         // Automatically register commands by scanning namespaces for a 'DroidPlugin' class.
         //print_r($this->autoLoader);
         $prefixes = $this->autoLoader->getPrefixesPsr4();
@@ -86,19 +98,21 @@ class Application extends ConsoleApplication
             }
         }
         
-        foreach ($this->getProject()->getTargets() as $target) {
-            $command = new \Droid\Command\TargetRunCommand();
-            $command->setName($target->getName());
-            $command->setDescription("Run target: " . $target->getName());
-            $command->setTarget($target->getName());
-            $this->add($command);
-            
-            //print_r($target);
+        if ($this->hasProject()) {
+            foreach ($this->getProject()->getTargets() as $target) {
+                $command = new \Droid\Command\TargetRunCommand();
+                $command->setName($target->getName());
+                $command->setDescription("Run target: " . $target->getName());
+                $command->setTarget($target->getName());
+                $this->add($command);
+                
+                //print_r($target);
+            }
         }
         //exit();
     }
     
-    public function getDroidFilename()
+    private function getDroidFilename()
     {
         if ($this->droidConfig) {
             $filename = $this->droidConfig;
@@ -119,9 +133,6 @@ class Application extends ConsoleApplication
         } else {
             // no parameters, assume 'droid.yml' in current working directory
             $filename = getcwd() . '/droid.yml';
-        }
-        if (!file_exists($filename)) {
-            exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
         }
         return $filename;
     }
