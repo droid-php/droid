@@ -11,12 +11,19 @@ class Project
     private $targets = [];
     private $registeredCommands = [];
     private $parameters = [];
+    private $basePath;
     
     public function __construct($filename)
     {
         if (!file_exists($filename)) {
             throw new RuntimeException("Droid project file not found: " . $filename);
         }
+        $this->basePath = dirname($filename);
+    }
+    
+    public function getBasePath()
+    {
+        return $this->basePath;
     }
     
     public function addRegisteredCommand(RegisteredCommand $registeredCommand)
