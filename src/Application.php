@@ -109,7 +109,7 @@ class Application extends ConsoleApplication
                 case '~':
                     // relative to home
                     $home = getenv("HOME");
-                    $filename = $home . '/' . $filename;
+                    $filename = $home . '/' . substr($filename, 2);
                     break;
                 default:
                     // relative from pwd/cwd
