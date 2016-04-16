@@ -16,6 +16,7 @@ class DroidPlugin
         $commands[] = new \Droid\Command\ConfigCommand();
         $commands[] = new \Droid\Command\DebugEchoCommand();
         $commands[] = new \Droid\Command\GeneratePluginCommand();
+        $commands[] = new \Droid\Command\InventoryCommand();
         return $commands;
     }
 }
