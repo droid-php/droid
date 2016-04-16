@@ -3,9 +3,16 @@
 
 use Droid\Application;
 
+// Running as `bin/droid`
 $loader = __DIR__ . '/../vendor/autoload.php';
 
 if (!file_exists($loader)) {
+    // Running as .phar file
+    $loader = __DIR__ . '/../autoload.php';
+}
+
+if (!file_exists($loader)) {
+    // Running as `vendor/bin/droid`
     $loader = __DIR__ . '/../../../autoload.php';
 }
 
