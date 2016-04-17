@@ -209,6 +209,18 @@ class TaskRunner
         
         $ssh->setTimeout($timeout);
         
+        $this->output->writeLn(" - Checking remote PHP version");
+        $cmd = "php -r \"echo PHP_VERSION_ID;\"";
+        $version = $ssh->exec($cmd);
+        if ($ssh->getExitStatus() != 0) {
+            $err = $ssh->getStdError();
+            echo $err;
+            throw new RuntimeException("Checking remote host failed. Is PHP installed?");
+        }
+        if ($version<50509) {
+            throw new RuntimeException("Remote host PHP version too low: $version");
+        }
+        
         $localDroid = getcwd() . '/droid.phar';
         
         if (!file_exists($localDroid)) {
@@ -218,7 +230,6 @@ class TaskRunner
         $remoteDroid = '/tmp/droid.phar';
         
         $sha1 = sha1(file_get_contents($localDroid));
-        
         
         $this->output->writeLn(" - Checking remote droid.phar version");
         $cmd = 'echo "' . $sha1 . ' ' . $remoteDroid .'" > ' . $remoteDroid . '.sha1';
