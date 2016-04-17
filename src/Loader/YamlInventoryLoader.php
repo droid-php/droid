@@ -7,6 +7,7 @@ use Droid\Model\Inventory;
 use Droid\Model\Host;
 use Droid\Model\HostGroup;
 use RuntimeException;
+use Droid\Utils;
 
 class YamlInventoryLoader
 {
@@ -21,12 +22,38 @@ class YamlInventoryLoader
         $this->loadVariables($data, $inventory);
         
         if (isset($data['hosts'])) {
-            foreach ($data['hosts'] as $hostName => $hostNode) {
+            foreach ($data['hosts'] as $hostName => $data) {
                 $host = new Host($hostName);
-                if (isset($hostNode['hostname'])) {
-                    $host->setHostName($hostNode['hostname']);
+                if ($data) {
+                    foreach ($data as $key => $value) {
+                        switch ($key) {
+                            case 'variables':
+                                $this->loadVariables($data, $host);
+                                break;
+                            case 'address':
+                                $host->setAddress($data[$key]);
+                                break;
+                            case 'username':
+                                $host->setUsername($data[$key]);
+                                break;
+                            case 'password':
+                                $host->setPassword($data[$key]);
+                                break;
+                            case 'auth':
+                                $host->setAuth($data[$key]);
+                                break;
+                            case 'keyfile':
+                                $filename = Utils::absoluteFilename($data[$key]);
+                                $host->setKeyFile($filename);
+                                break;
+                            case 'keypass':
+                                $host->setKeyPass($data[$key]);
+                                break;
+                            default:
+                                throw new RuntimeException("Unknown host property: " . $key);
+                        }
+                    }
                 }
-                $this->loadVariables($hostNode, $host);
                 $inventory->addHost($host);
             }
         }

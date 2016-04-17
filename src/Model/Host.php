@@ -7,18 +7,23 @@ use RuntimeException;
 class Host
 {
     private $name;
-    private $hostname;
+    private $address;
     private $port;
     private $username;
+    private $password;
+    private $keyFile;
+    private $keyPass;
+    private $auth;
     
     use VariableTrait;
     
     public function __construct($name)
     {
         $this->name = $name;
-        $this->hostname = $name;
+        $this->address = $name;
         $this->port = 22;
         $this->username = 'root';
+        $this->auth = 'agent';
     }
     
     public function getName()
@@ -26,16 +31,17 @@ class Host
         return $this->name;
     }
     
-    public function getHostname()
+    public function getAddress()
     {
-        return $this->hostname;
+        return $this->address;
     }
     
-    public function setHostname($hostname)
+    public function setAddress($address)
     {
-        $this->hostname = $hostname;
+        $this->address = $address;
         return $this;
     }
+    
     
     public function getPort()
     {
@@ -59,4 +65,47 @@ class Host
         return $this;
     }
     
+    public function getPassword()
+    {
+        return $this->password;
+    }
+    
+    public function setPassword($password)
+    {
+        $this->password = $password;
+        return $this;
+    }
+    
+    public function getAuth()
+    {
+        return $this->auth;
+    }
+    
+    public function setAuth($auth)
+    {
+        $this->auth = $auth;
+        return $this;
+    }
+    
+    public function getKeyFile()
+    {
+        return $this->keyFile;
+    }
+    
+    public function setKeyFile($keyFile)
+    {
+        $this->keyFile = $keyFile;
+        return $this;
+    }
+    
+    public function getKeyPass()
+    {
+        return $this->keyPass;
+    }
+    
+    public function setKeyPass($keyPass)
+    {
+        $this->keyPass = $keyPass;
+        return $this;
+    }
 }

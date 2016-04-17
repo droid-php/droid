@@ -98,11 +98,11 @@ class TaskRunner
         foreach ($hosts as $host) {
             $username = 'root';
             $this->output->writeln(
-                "<comment> * Connecting: " . $host->getHostname() ."</comment> "
+                "<comment> * Connecting to " . $host->getName() ."</comment> "
             );
             $ssh = $this->getSshConnection($host);
             
-            $cmd = '/tmp/droid.phar ' . $command->getName()  . ' "LOL"';
+            $cmd = '/tmp/droid.phar ' . $command->getName()  . ' "LOL" --ansi';
             $out = $ssh->exec($cmd);
 
             echo $out;
@@ -163,47 +163,42 @@ class TaskRunner
     
     protected function getSshConnection(Host $host)
     {
-        $hostname = $host->getHostName();
-
+        $address = $host->getAddress();
         $username = $host->getUsername();
         $port = $host->getPort();
 
-        $this->output->writeLn(" - Connecting: <info>$username@$hostname:$port</info>");
+        $this->output->writeLn(" - Connecting: <info>$username@$address:$port</info>");
         
-        $ssh = new \phpseclib\Net\SSH2($hostname);
+        $ssh = new \phpseclib\Net\SSH2($address);
 
         $res = null;
         
-        /*
-        if ($input->getOption('keyfile')) {
-            // Load a private key
-            $keyName = $input->getOption('keyfile');
-            $key = new \phpseclib\Crypt\RSA();
-            $passphrase = $input->getOption('passphrase');
-            if ($passphrase) {
-                $key->setPassword($passphrase);
-            }
+        switch ($host->getAuth()) {
+            case 'key':
+                // Load a private key
+                $keyFile = $host->getKeyFile();
+                $key = new \phpseclib\Crypt\RSA();
+                $keyPass = $host->getKeyPass();
+                if ($keyPass) {
+                    $key->setPassword($keyPass);
+                }
 
-            if (!$key->loadKey(file_get_contents($keyName))) {
-                throw new RuntimeException("Loading key failed: " . $keyName);
-            }
-            $res = $ssh->login($username, $key);
+                if (!$key->loadKey(file_get_contents($keyFile))) {
+                    throw new RuntimeException("Loading key failed: " . $keyFile);
+                }
+                $res = $ssh->login($username, $key);
+                break;
+            case 'agent':
+                $agent = new \phpseclib\System\SSH\Agent();
+                $res = $ssh->login($username, $agent);
+                break;
+            case 'password':
+                $res = $ssh->login($username, $host->getPassword());
+                break;
         }
-        
-        if ($input->getOption('agent')) {
-        */
-            $agent = new \phpseclib\System\SSH\Agent();
-            $res = $ssh->login($username, $agent);
-        /*
-        }
-        
-        if ($input->getOption('password')) {
-            $res = $ssh->login($username, $input->getOption('password'));
-        }
-        */
         
         if (!$res) {
-            throw new RuntimeException("Login failed: " . $hostname . ' as ' . $username);
+            throw new RuntimeException("Login failed: $username@$address:$port");
         }
         $ssh->enableQuietMode();
         

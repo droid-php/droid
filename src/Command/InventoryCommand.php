@@ -34,6 +34,7 @@ class InventoryCommand extends Command
         
         foreach ($inventory->getHosts() as $host) {
             $output->writeln("<info>Host " . $host->getName() . "</info>");
+            $output->writeln("   Auth: " . $host->getAuth());
             foreach ($host->getVariables() as $name => $value) {
                 $output->writeln("    - $name=`$value`");
             }
