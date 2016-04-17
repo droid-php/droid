@@ -22,6 +22,9 @@ class YamlInventoryLoader
         if (isset($data['hosts'])) {
             foreach ($data['hosts'] as $hostName => $hostNode) {
                 $host = new Host($hostName);
+                if (isset($hostNode['hostname'])) {
+                    $host->setHostName($hostNode['hostname']);
+                }
                 $inventory->addHost($host);
             }
         }
