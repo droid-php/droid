@@ -26,19 +26,37 @@ class Inventory
     {
         return isset($this->hosts[$name]);
     }
+    
+    public function getHosts()
+    {
+        return $this->hosts;
+    }
 
     public function addHostGroup(HostGroup $hostGroup)
     {
         $this->hostGroups[$hostGroup->getName()] = $hostGroup;
     }
     
-    public function getHosts()
+    public function hasHostGroup($name)
     {
-        return $this->hosts;
+        return isset($this->hostGroups[$name]);
     }
     
     public function getHostGroups()
     {
         return $this->hostGroups;
+    }
+    
+    public function getHostsByName($name)
+    {
+        if ($this->hasHostGroup($name)) {
+            $hosts = $this->getHostGroup($name);
+            return $hosts;
+        }
+        $hosts = [];
+        if ($this->hasHost($name)) {
+            $hosts[] = $this->getHost($name);
+        }
+        return $hosts;
     }
 }

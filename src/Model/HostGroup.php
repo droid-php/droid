@@ -9,6 +9,8 @@ class HostGroup
     private $name;
     private $hosts = [];
     
+    use VariableTrait;
+    
     public function __construct($name)
     {
         $this->name = $name;

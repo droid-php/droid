@@ -28,17 +28,24 @@ class InventoryCommand extends Command
         $output->writeln("Droid inventory:");
         $inventory = $this->getApplication()->getInventory();
 
-        $output->writeln("Hosts: ");
         
         foreach ($inventory->getHosts() as $host) {
-            $output->writeln(" - " . $host->getName());
+            $output->writeln("<info>Host " . $host->getName() . "</info>");
+            foreach ($host->getVariables() as $name => $value) {
+                $output->writeln("    - $name=`$value`");
+            }
         }
 
-        $output->writeln("Groups: ");
         foreach ($inventory->getHostGroups() as $group) {
-            $output->writeln(" - " . $group->getName());
+            $output->write("<info>Group " . $group->getName() . "</info>: ");
+            $hostnames ='';
             foreach ($group->getHosts() as $host) {
-                $output->writeln("    - " . $host->getName());
+                $hostnames .= '<comment>' . $host->getName() . '</comment>, ';
+            }
+            $output->writeln(trim($hostnames, ' ,'));
+
+            foreach ($group->getVariables() as $name => $value) {
+                $output->writeln("    - $name=`$value`");
             }
         }
         $output->writeln("Done");

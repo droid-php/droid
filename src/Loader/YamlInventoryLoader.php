@@ -25,6 +25,7 @@ class YamlInventoryLoader
                 if (isset($hostNode['hostname'])) {
                     $host->setHostName($hostNode['hostname']);
                 }
+                $this->loadVariables($hostNode, $host);
                 $inventory->addHost($host);
             }
         }
@@ -32,16 +33,26 @@ class YamlInventoryLoader
         if (isset($data['groups'])) {
             foreach ($data['groups'] as $groupName => $groupNode) {
                 $group = new HostGroup($groupName);
-                foreach ($groupNode as $hostName) {
+                foreach ($groupNode['hosts'] as $hostName) {
                     if (!$inventory->hasHost($hostName)) {
                         throw new RuntimeException("Group $groupName refers to undefined host: $hostName");
                     }
                     $host = $inventory->getHost($hostName);
                     $group->addHost($host);
                 }
+                $this->loadVariables($groupNode, $group);
                 $inventory->addHostGroup($group);
             }
         }
         //print_r($inventory);
+    }
+    
+    public function loadVariables($data, $obj)
+    {
+        if (isset($data['variables'])) {
+            foreach ($data['variables'] as $name => $value) {
+                $obj->setVariable($name, $value);
+            }
+        }
     }
 }
