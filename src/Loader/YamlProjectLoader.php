@@ -40,29 +40,45 @@ class YamlProjectLoader
                 if (isset($targetNode['hosts'])) {
                     $target->setHosts($targetNode['hosts']);
                 }
+                
                 if (isset($targetNode['tasks'])) {
-                    foreach ($targetNode['tasks'] as $taskNodes) {
-                        foreach ($taskNodes as $commandName => $variables) {
-                            $taskVariables = [];
-                            $loopVariables = null;
-                            if ($variables) {
-                                foreach ($variables as $name => $value) {
-                                    switch ($name) {
-                                        case '$loop':
-                                            $loopVariables = $value;
-                                            break;
-                                        default:
-                                            $taskVariables[$name] = $value;
-                                            break;
+                    foreach ($targetNode['tasks'] as $taskNode) {
+                        $task = new Task();
+                        foreach ($taskNode as $key => $value) {
+                            switch ($key) {
+                                case 'name':
+                                    $task->setName($taskNode[$key]);
+                                    break;
+                                case 'command':
+                                    $task->setCommandName($taskNode[$key]);
+                                    break;
+                                case 'arguments':
+                                    foreach ($taskNode['arguments'] as $var => $val) {
+                                        $task->setArgument($var, $val);
                                     }
-                                }
+                                    break;
+                                default:
+                                    // Assume commandname
+                                    $task->setCommandName($key);
+                                    if (is_array($value)) {
+                                        foreach ($value as $var => $val) {
+                                            $task->setArgument($var, $val);
+                                        }
+                                    }
+                                    if (is_string($value)) {
+                                        preg_match_all(
+                                            "/(\w+)[\s]*=[\s]*((?:[^\"'\s]+)|'(?:[^']*)'|\"(?:[^\"]*)\")/",
+                                            $value,
+                                            $matches
+                                        );
+                                        for ($i=0; $i<count($matches[1]); $i++) {
+                                            $val = trim($matches[2][$i], " \"");
+                                            $task->setArgument($matches[1][$i], $val);
+                                        }
+                                    }
                             }
-                            $task = new Task($commandName, $taskVariables);
-                            if ($loopVariables) {
-                                $task->setLoopVariables($loopVariables);
-                            }
-                            $target->addTask($task);
                         }
+                        $target->addTask($task);
                     }
                 }
             }

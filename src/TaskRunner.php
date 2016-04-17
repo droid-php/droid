@@ -29,47 +29,40 @@ class TaskRunner
         }
 
         foreach ($target->getTasks() as $task) {
-            if ($task->hasLoopVariables()) {
-                throw new RuntimeException("Loops need to be re-implemented");
-                /*
-                foreach ($task->getLoopParameters() as $i => $loopParameters) {
-                    $parameters = array_merge($task->getParameters(), $project->getParameters());
-                    $parameters = array_merge($parameters, $loopParameters);
-                    $res = $this->runCommand($task->getCommandName(), $parameters, $target);
+            $variables = array_merge($project->getVariables(), $target->getVariables());
+
+            $command = $this->app->find($task->getCommandName());
+            /* NOTE: The command instance gets reused between tasks.
+             * This gives the unexpected behaviour that after the first run, the app-definitions are merged
+             * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
+             */
+             
+            if (!$command) {
+                throw new RuntimeException("Unsupported command: " . $task->getCommandName());
+            }
+            $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
+
+            $this->output->writeln(
+                "<comment> * Executing: " . $command->getName() ."</comment> " .
+                $this->commandInputToText($commandInput) .
+                "</comment>"
+            );
+
+            if ($target->getHosts()) {
+                if (!$this->app->hasInventory()) {
+                    throw new RuntimeException(
+                        "Can't run remote commands without inventory, please use --droid-inventory"
+                    );
                 }
-                */
+                $inventory = $this->app->getInventory();
+                $hosts = $inventory->getHostsByName($target->getHosts());
+
+                $res = $this->runRemoteCommand($command, $commandInput, $hosts);
             } else {
-                $variables = array_merge($project->getVariables(), $target->getVariables(), $task->getVariables());
-
-                $command = $this->app->find($task->getCommandName());
-                /* NOTE: The command instance gets reused between tasks.
-                 * This gives the unexpected behaviour that after the first run, the app-definitions are merged
-                 * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
-                 */
-                 
-                if (!$command) {
-                    throw new RuntimeException("Unsupported command: " . $task->getCommandName());
-                }
-                $commandInput = $this->prepareCommandInput($command, $variables);
-
-                $this->output->writeln(
-                    "<comment> * Executing: " . $command->getName() ."</comment> " . $this->commandInputToText($commandInput) . "</comment>"
-                );
-
-                if ($target->getHosts()) {
-                    if (!$this->app->hasInventory()) {
-                        throw new RuntimeException("Can't run remote commands without inventory, please use --droid-inventory");
-                    }
-                    $inventory = $this->app->getInventory();
-                    $hosts = $inventory->getHostsByName($target->getHosts());
-
-                    $res = $this->runRemoteCommand($command, $commandInput, $hosts);
-                } else {
-                    $res = $this->runLocalCommand($command, $commandInput);
-                }
-                if ($res) {
-                    throw new RuntimeException("Task failed: " . $task->getCommandName());
-                }
+                $res = $this->runLocalCommand($command, $commandInput);
+            }
+            if ($res) {
+                throw new RuntimeException("Task failed: " . $task->getCommandName());
             }
         }
         return true;
@@ -120,7 +113,7 @@ class TaskRunner
         $res = true;
     }
     
-    public function prepareCommandInput(Command $command, $variables)
+    public function prepareCommandInput(Command $command, $arguments, $variables)
     {
         $variableString = '';
         foreach ($variables as $name => $value) {
@@ -132,23 +125,23 @@ class TaskRunner
             );
         }
 
-        // Variable substitution in variables
-        foreach ($variables as $name => $value) {
+        // Variable substitution in arguments
+        foreach ($arguments as $name => $value) {
             foreach ($variables as $name2 => $value2) {
                 $value = str_replace('{{' . $name2 . '}}', $value2, $value);
-                $variables[$name] = $value;
+                $arguments[$name] = $value;
             }
         }
         
-        $arguments = [];
-        $variables['command'] = $command->getName();
+        $inputs = [];
+        $arguments['command'] = $command->getName();
         
         $definition = $command->getDefinition();
         
         foreach ($definition->getArguments() as $argument) {
             $name = $argument->getName();
-            if (isset($variables[$name])) {
-                $arguments[$name]=$variables[$name];
+            if (isset($arguments[$name])) {
+                $inputs[$name]=$arguments[$name];
             } else {
                 if ($argument->isRequired()) {
                     throw new RuntimeException("Missing required argument: " . $name);
@@ -158,12 +151,12 @@ class TaskRunner
 
         foreach ($definition->getOptions() as $option) {
             $name = $option->getName();
-            if (isset($variables[$name])) {
-                $arguments['--' . $name] = $variables[$name];
+            if (isset($arguments[$name])) {
+                $inputs['--' . $name] = $arguments[$name];
             }
         }
         
-        $commandInput = new ArrayInput($arguments, $definition);
+        $commandInput = new ArrayInput($inputs, $definition);
         return $commandInput;
     }
     

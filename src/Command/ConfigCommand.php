@@ -37,10 +37,10 @@ class ConfigCommand extends Command
             }
             $output->writeln("     Variables: " . $target->getVariablesAsString());
             foreach ($target->getTasks() as $task) {
-                $output->writeln("    <comment> Task: " . $task->getCommandName() . "</comment>");
-                $variables = $task->getVariables();
-                if ($variables) {
-                    foreach ($variables as $name => $value) {
+                $output->writeln("    <comment> Task: <info>" . $task->getName() . "</info> " . $task->getCommandName() . "</comment>");
+                $arguments = $task->getArguments();
+                if ($arguments) {
+                    foreach ($arguments as $name => $value) {
                         if (!is_array($value)) {
                             $output->writeln("        * $name = `$value`");
                         } else {

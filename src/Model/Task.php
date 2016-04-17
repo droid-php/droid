@@ -3,41 +3,60 @@
 namespace Droid\Model;
 
 use InvalidArgumentException;
+use RuntimeException;
 
 class Task
 {
+    private $name;
     private $commandName;
-    private $loopVariables;
+    private $arguments = [];
     
-    use VariableTrait;
-    
-    public function __construct($commandName, $variables = [])
+    public function setArgument($name, $value)
     {
-        $this->commandName = $commandName;
-        if ($variables) {
-            $this->variables = $variables;
-        } else {
-            $this->variables=[];
+        $this->arguments[$name] = $value;
+    }
+    
+    public function getArgument($name)
+    {
+        if (!$this->hasArgument($name)) {
+            throw new RuntimeException('No such argument');
         }
+        return $this->arguments[$name];
     }
     
-    public function setLoopVariables($loopVariables)
+    public function hasArgument($name)
     {
-        $this->loopVariables = $loopVariables;
+        return isset($this->arguments[$name]);
     }
     
-    public function hasLoopVariables()
+    public function getArguments()
     {
-        return isset($this->loopVariables);
-    }
-    
-    public function getLoopVariables()
-    {
-        return $this->loopVariables;
+        return $this->arguments;
     }
     
     public function getCommandName()
     {
         return $this->commandName;
+    }
+    
+    public function setCommandName($commandName)
+    {
+        if (!strpos($commandName, ':')) {
+            throw new RuntimeException("Invalid command-name: " . $commandName);
+        }
+        
+        $this->commandName = $commandName;
+        return $this;
+    }
+    
+    public function getName()
+    {
+        return $this->name;
+    }
+    
+    public function setName($name)
+    {
+        $this->name = $name;
+        return $this;
     }
 }
