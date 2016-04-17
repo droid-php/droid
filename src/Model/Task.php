@@ -10,6 +10,7 @@ class Task
     private $name;
     private $commandName;
     private $arguments = [];
+    private $items = [];
     
     public function setArgument($name, $value)
     {
@@ -58,5 +59,20 @@ class Task
     {
         $this->name = $name;
         return $this;
+    }
+    
+    public function setItems($items)
+    {
+        $this->items = $items;
+    }
+    
+    public function getItems()
+    {
+        if (count($this->items)==0) {
+            return [
+                'default'
+            ];
+        }
+        return $this->items;
     }
 }

@@ -30,7 +30,6 @@ class TaskRunner
         }
 
         foreach ($target->getTasks() as $task) {
-            $variables = array_merge($project->getVariables(), $target->getVariables());
 
             $command = $this->app->find($task->getCommandName());
             /* NOTE: The command instance gets reused between tasks.
@@ -41,29 +40,35 @@ class TaskRunner
             if (!$command) {
                 throw new RuntimeException("Unsupported command: " . $task->getCommandName());
             }
-            $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
+            
+            foreach ($task->getItems() as $item) {
+                $variables = array_merge($project->getVariables(), $target->getVariables());
+                
+                $variables['item'] = (string)$item;
+                $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
 
-            $this->output->writeln(
-                "<comment> * Executing: " . $command->getName() ."</comment> " .
-                $this->commandInputToText($commandInput) .
-                "</comment>"
-            );
+                $this->output->writeln(
+                    "<comment> * Executing: " . $command->getName() ."</comment> " .
+                    $this->commandInputToText($commandInput) .
+                    "</comment>"
+                );
 
-            if ($target->getHosts()) {
-                if (!$this->app->hasInventory()) {
-                    throw new RuntimeException(
-                        "Can't run remote commands without inventory, please use --droid-inventory"
-                    );
+                if ($target->getHosts()) {
+                    if (!$this->app->hasInventory()) {
+                        throw new RuntimeException(
+                            "Can't run remote commands without inventory, please use --droid-inventory"
+                        );
+                    }
+                    $inventory = $this->app->getInventory();
+                    $hosts = $inventory->getHostsByName($target->getHosts());
+
+                    $res = $this->runRemoteCommand($command, $commandInput, $hosts);
+                } else {
+                    $res = $this->runLocalCommand($command, $commandInput);
                 }
-                $inventory = $this->app->getInventory();
-                $hosts = $inventory->getHostsByName($target->getHosts());
-
-                $res = $this->runRemoteCommand($command, $commandInput, $hosts);
-            } else {
-                $res = $this->runLocalCommand($command, $commandInput);
-            }
-            if ($res) {
-                throw new RuntimeException("Task failed: " . $task->getCommandName());
+                if ($res) {
+                    throw new RuntimeException("Task failed: " . $task->getCommandName());
+                }
             }
         }
         return 0;
