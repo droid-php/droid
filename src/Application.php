@@ -142,29 +142,10 @@ class Application extends ConsoleApplication
         //exit();
     }
     
-    private function absoluteFilename($filename)
-    {
-        switch ($filename[0]) {
-            case '/':
-                // absolute filename
-                break;
-            case '~':
-                // relative to home
-                $home = getenv("HOME");
-                $filename = $home . '/' . substr($filename, 2);
-                break;
-            default:
-                // relative from pwd/cwd
-                $filename = getcwd() . '/' . $filename;
-                break;
-        }
-        return $filename;
-    }
-    
     private function getDroidFilename()
     {
         if ($this->droidConfig) {
-            $filename = $this->absoluteFilename($this->droidConfig);
+            $filename = Utils::absoluteFilename($this->droidConfig);
         } else {
             // no parameters, assume 'droid.yml' in current working directory
             $filename = getcwd() . '/droid.yml';
@@ -175,7 +156,7 @@ class Application extends ConsoleApplication
     private function getInventoryFilename()
     {
         if ($this->inventoryConfig) {
-            $filename = $this->absoluteFilename($this->inventoryConfig);
+            $filename = Utils::absoluteFilename($this->inventoryConfig);
         } else {
             // no parameters, assume 'droid.yml' in current working directory
             $filename = getcwd() . '/droid-inventory.yml';
