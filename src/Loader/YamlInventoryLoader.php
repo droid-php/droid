@@ -18,6 +18,7 @@ class YamlInventoryLoader
         
         $parser = new YamlParser();
         $data = $parser->parse(file_get_contents($filename));
+        $this->loadVariables($data, $inventory);
         
         if (isset($data['hosts'])) {
             foreach ($data['hosts'] as $hostName => $hostNode) {

@@ -28,6 +28,9 @@ class InventoryCommand extends Command
         $output->writeln("Droid inventory:");
         $inventory = $this->getApplication()->getInventory();
 
+        foreach ($inventory->getVariables() as $name => $value) {
+            $output->writeln("- $name=`$value`");
+        }
         
         foreach ($inventory->getHosts() as $host) {
             $output->writeln("<info>Host " . $host->getName() . "</info>");

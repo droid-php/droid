@@ -9,6 +9,8 @@ class Inventory
     private $hosts = [];
     private $hostGroups = [];
     
+    use VariableTrait;
+    
     public function addHost(Host $host)
     {
         $this->hosts[$host->getName()] = $host;
