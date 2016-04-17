@@ -26,12 +26,26 @@ class DebugEchoCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Set color of the output'
             )
+            ->addOption(
+                'uppercase',
+                'u',
+                InputOption::VALUE_NONE,
+                'Uppercase the output'
+            )
         ;
     }
     
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $output->writeLn("ECHO: " . $input->getArgument('message') . " @ " . $input->getOption('color'));
+        $message = $input->getArgument('message');
+        if ($input->getOption('uppercase')) {
+            $message = strtoupper($message);
+        }
+        $color = $input->getOption('color');
+        if (!$color) {
+            $color = 'white';
+        }
+        $output->writeLn('<fg=' . $color . '>' . $message . '</>');
         //$output->writeLn($input->getArgument('message'));
         //return 0;
     }
