@@ -7,57 +7,37 @@ use InvalidArgumentException;
 class Task
 {
     private $commandName;
-    private $parameters;
-    private $loopParameters;
+    private $loopVariables;
     
-    public function __construct($commandName, $parameters = [])
+    use VariableTrait;
+    
+    public function __construct($commandName, $variables = [])
     {
         $this->commandName = $commandName;
-        if ($parameters) {
-            $this->parameters = $parameters;
+        if ($variables) {
+            $this->variables = $variables;
         } else {
-            $this->parameters=[];
+            $this->variables=[];
         }
     }
     
-    public function setLoopParameters($loopParameters)
+    public function setLoopVariables($loopVariables)
     {
-        $this->loopParameters = $loopParameters;
+        $this->loopVariables = $loopVariables;
     }
     
-    public function hasLoopParameters()
+    public function hasLoopVariables()
     {
-        return isset($this->loopParameters);
+        return isset($this->loopVariables);
     }
     
-    public function getLoopParameters()
+    public function getLoopVariables()
     {
-        return $this->loopParameters;
+        return $this->loopVariables;
     }
     
     public function getCommandName()
     {
         return $this->commandName;
-    }
-    
-    public function getParameters()
-    {
-        return $this->parameters;
-    }
-    
-    public function hasParameter($name)
-    {
-        if (isset($this->parameters[$name])) {
-            return true;
-        }
-        return false;
-    }
-    
-    public function getParameter($name)
-    {
-        if (!$this->hasParameter($name)) {
-            throw new InvalidArgumentException("No such parameter: " . $name);
-        }
-        return $this->parameters[$name];
     }
 }

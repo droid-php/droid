@@ -2,7 +2,7 @@
 
 namespace Droid\Model;
 
-//use Droid\Task\TaskInterface;
+use Droid\Model\VariableTrait;
 use RuntimeException;
 
 class Project
@@ -10,8 +10,9 @@ class Project
     //private $tasks = [];
     private $targets = [];
     private $registeredCommands = [];
-    private $parameters = [];
     private $basePath;
+    
+    use VariableTrait;
     
     public function __construct($filename)
     {
@@ -54,29 +55,5 @@ class Project
             }
         }
         return null;
-    }
-    
-    public function setParameter($name, $value)
-    {
-        $this->parameters[$name] = $value;
-        return $this;
-    }
-    
-    public function hasParameter($name)
-    {
-        return isset($this->parameters[$name]);
-    }
-    
-    public function getParameter($name)
-    {
-        if (!$this->hasParameter($name)) {
-            throw new RuntimeException("No such project parameter: " . $name);
-        }
-        return $this->parameters[$name];
-    }
-    
-    public function getParameters()
-    {
-        return $this->parameters;
     }
 }

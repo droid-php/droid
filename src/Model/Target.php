@@ -8,6 +8,8 @@ class Target
     private $hosts;
     private $tasks = [];
     
+    use VariableTrait;
+    
     public function __construct($name)
     {
         $this->name = $name;

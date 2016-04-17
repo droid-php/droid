@@ -7,6 +7,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Application as App;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
+use Droid\Model\Host;
 use RuntimeException;
 
 class TaskRunner
@@ -28,7 +29,7 @@ class TaskRunner
         }
 
         foreach ($target->getTasks() as $task) {
-            if ($task->hasLoopParameters()) {
+            if ($task->hasLoopVariables()) {
                 throw new RuntimeException("Loops need to be re-implemented");
                 /*
                 foreach ($task->getLoopParameters() as $i => $loopParameters) {
@@ -38,7 +39,7 @@ class TaskRunner
                 }
                 */
             } else {
-                $parameters = array_merge($task->getParameters(), $project->getParameters());
+                $variables = array_merge($project->getVariables(), $target->getVariables(), $task->getVariables());
 
                 $command = $this->app->find($task->getCommandName());
                 /* NOTE: The command instance gets reused between tasks.
@@ -49,14 +50,20 @@ class TaskRunner
                 if (!$command) {
                     throw new RuntimeException("Unsupported command: " . $task->getCommandName());
                 }
-                $commandInput = $this->prepareCommandInput($command, $parameters);
+                $commandInput = $this->prepareCommandInput($command, $variables);
 
                 $this->output->writeln(
                     "<comment> * Executing: " . $command->getName() ."</comment> " . $this->commandInputToText($commandInput) . "</comment>"
                 );
 
                 if ($target->getHosts()) {
-                    $res = $this->runRemoteCommand($command, $commandInput, $target->getHosts());
+                    if (!$this->app->hasInventory()) {
+                        throw new RuntimeException("Can't run remote commands without inventory, please use --droid-inventory");
+                    }
+                    $inventory = $this->app->getInventory();
+                    $hosts = $inventory->getHostsByName($target->getHosts());
+
+                    $res = $this->runRemoteCommand($command, $commandInput, $hosts);
                 } else {
                     $res = $this->runLocalCommand($command, $commandInput);
                 }
@@ -95,62 +102,53 @@ class TaskRunner
     
     public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
     {
-        $username = 'root';
-        if (!$this->app->hasInventory()) {
-            throw new RuntimeException("Can't run remote commands without inventory, please use --droid-inventory");
-        }
-        $inventory = $this->app->getInventory();
-        $host = $inventory->getHost($hosts);
-        
-        $this->output->writeln(
-            "<comment> * Connecting: " . $host->getHostname() ."</comment> "
-        );
-        $ssh = new \phpseclib\Net\SSH2($host->getHostname());
-        $agent = new \phpseclib\System\SSH\Agent();
-        $res = $ssh->login($username, $agent);
-        if (!$res) {
-            throw new RuntimeException("Login failed");
-        }
-        $cmd = '/tmp/droid.phar ' . $command->getName()  . ' "LOL"';
-        $out = $ssh->exec($cmd);
-        $ssh->enableQuietMode();
+        foreach ($hosts as $host) {
+            $username = 'root';
+            $this->output->writeln(
+                "<comment> * Connecting: " . $host->getHostname() ."</comment> "
+            );
+            $ssh = $this->getSshConnection($host);
+            
+            $cmd = '/tmp/droid.phar ' . $command->getName()  . ' "LOL"';
+            $out = $ssh->exec($cmd);
 
-        echo $out;
-        $err = $ssh->getStdError();
-        echo $err;
+            echo $out;
+            $err = $ssh->getStdError();
+            echo $err;
+        }
 
         $res = true;
     }
     
-    public function prepareCommandInput(Command $command, $params)
+    public function prepareCommandInput(Command $command, $variables)
     {
-        $paramText = '';
-        foreach ($params as $key => $value) {
-            $paramText .= '' . $key . '=<info>' . $value . '</info> ';
+        $variableString = '';
+        foreach ($variables as $name => $value) {
+            $variableString .= ' ' . $name . '=`<info>' . $value . '</info>`';
         }
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
             $this->output->writeln(
-                "<comment> * TASK " . $command->getName() ."</comment> " . trim($paramText) . "</comment>"
+                "<comment> * TASK " . $command->getName() ."</comment> " . trim($variableString) . "</comment>"
             );
         }
 
-        // Variable substitution in params
-        foreach ($params as $key => $value) {
-            foreach ($params as $key2 => $value2) {
-                $value = str_replace('{{' . $key2 . '}}', $value2, $value);
-                $params[$key] = $value;
+        // Variable substitution in variables
+        foreach ($variables as $name => $value) {
+            foreach ($variables as $name2 => $value2) {
+                $value = str_replace('{{' . $name2 . '}}', $value2, $value);
+                $variables[$name] = $value;
             }
         }
         
         $arguments = [];
-        $params['command'] = $command->getName();
+        $variables['command'] = $command->getName();
         
         $definition = $command->getDefinition();
         
         foreach ($definition->getArguments() as $argument) {
             $name = $argument->getName();
-            if (isset($params[$name])) {
-                $arguments[$name]=$params[$name];
+            if (isset($variables[$name])) {
+                $arguments[$name]=$variables[$name];
             } else {
                 if ($argument->isRequired()) {
                     throw new RuntimeException("Missing required argument: " . $name);
@@ -160,12 +158,66 @@ class TaskRunner
 
         foreach ($definition->getOptions() as $option) {
             $name = $option->getName();
-            if (isset($params[$name])) {
-                $arguments['--' . $name] = $params[$name];
+            if (isset($variables[$name])) {
+                $arguments['--' . $name] = $variables[$name];
             }
         }
         
         $commandInput = new ArrayInput($arguments, $definition);
         return $commandInput;
+    }
+    
+    
+    protected function getSshConnection(Host $host)
+    {
+        $hostname = $host->getHostName();
+
+        $username = $host->getUsername();
+        $port = $host->getPort();
+
+        $this->output->writeLn(" - Connecting: <info>$username@$hostname:$port</info>");
+        
+        $ssh = new \phpseclib\Net\SSH2($hostname);
+
+        $res = null;
+        
+        /*
+        if ($input->getOption('keyfile')) {
+            // Load a private key
+            $keyName = $input->getOption('keyfile');
+            $key = new \phpseclib\Crypt\RSA();
+            $passphrase = $input->getOption('passphrase');
+            if ($passphrase) {
+                $key->setPassword($passphrase);
+            }
+
+            if (!$key->loadKey(file_get_contents($keyName))) {
+                throw new RuntimeException("Loading key failed: " . $keyName);
+            }
+            $res = $ssh->login($username, $key);
+        }
+        
+        if ($input->getOption('agent')) {
+        */
+            $agent = new \phpseclib\System\SSH\Agent();
+            $res = $ssh->login($username, $agent);
+        /*
+        }
+        
+        if ($input->getOption('password')) {
+            $res = $ssh->login($username, $input->getOption('password'));
+        }
+        */
+        
+        if (!$res) {
+            throw new RuntimeException("Login failed: " . $hostname . ' as ' . $username);
+        }
+        $ssh->enableQuietMode();
+        
+        $timeout = 3;
+        
+        $ssh->setTimeout($timeout);
+
+        return $ssh;
     }
 }

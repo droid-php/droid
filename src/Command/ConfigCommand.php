@@ -31,20 +31,20 @@ class ConfigCommand extends Command
         $output->writeln("Targets: ");
         
         foreach ($project->getTargets() as $target) {
-            $output->writeln(" - " . $target->getName());
+            $output->writeln("<info>Target: " . $target->getName() . "</info>");
             if ($target->getHosts()) {
                 $output->writeln("     Hosts: " . $target->getHosts());
             }
-            $output->writeln("     Tasks:");
+            $output->writeln("     Variables: " . $target->getVariablesAsString());
             foreach ($target->getTasks() as $task) {
-                $output->writeln("     - " . $task->getCommandName());
-                $parameters = $task->getParameters();
-                if ($parameters) {
-                    foreach ($parameters as $key => $value) {
+                $output->writeln("    <comment> Task: " . $task->getCommandName() . "</comment>");
+                $variables = $task->getVariables();
+                if ($variables) {
+                    foreach ($variables as $name => $value) {
                         if (!is_array($value)) {
-                            $output->writeln("        * $key = `$value`");
+                            $output->writeln("        * $name = `$value`");
                         } else {
-                            $output->writeln("        * $key = [array]");
+                            $output->writeln("        * $name = [array]");
                         }
                     }
                 }

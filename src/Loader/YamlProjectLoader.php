@@ -29,45 +29,51 @@ class YamlProjectLoader
             }
         }
 
-        if (isset($data['parameters'])) {
-            foreach ($data['parameters'] as $key => $value) {
-                $project->setParameter($key, $value);
-            }
-        }
-        
+        $this->loadVariables($data, $project);
         
         if (isset($data['targets'])) {
             foreach ($data['targets'] as $targetName => $targetNode) {
                 $target = new Target($targetName);
+                $this->loadVariables($targetNode, $target);
+                
                 $project->addTarget($target);
                 if (isset($targetNode['hosts'])) {
                     $target->setHosts($targetNode['hosts']);
                 }
                 if (isset($targetNode['tasks'])) {
                     foreach ($targetNode['tasks'] as $taskNodes) {
-                        foreach ($taskNodes as $commandName => $parameters) {
-                            $taskParameters = [];
-                            $loopParameters = null;
-                            if ($parameters) {
-                                foreach ($parameters as $key => $value) {
-                                    switch ($key) {
+                        foreach ($taskNodes as $commandName => $variables) {
+                            $taskVariables = [];
+                            $loopVariables = null;
+                            if ($variables) {
+                                foreach ($variables as $name => $value) {
+                                    switch ($name) {
                                         case '$loop':
-                                            $loopParameters = $value;
+                                            $loopVariables = $value;
                                             break;
                                         default:
-                                            $taskParameters[$key] = $value;
+                                            $taskVariables[$name] = $value;
                                             break;
                                     }
                                 }
                             }
-                            $task = new Task($commandName, $taskParameters);
-                            if ($loopParameters) {
-                                $task->setLoopParameters($loopParameters);
+                            $task = new Task($commandName, $taskVariables);
+                            if ($loopVariables) {
+                                $task->setLoopVariables($loopVariables);
                             }
                             $target->addTask($task);
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    public function loadVariables($data, $obj)
+    {
+        if (isset($data['variables'])) {
+            foreach ($data['variables'] as $name => $value) {
+                $obj->setVariable($name, $value);
             }
         }
     }
