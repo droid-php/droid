@@ -14,6 +14,7 @@ class TaskRunner
 {
     private $output;
     private $app;
+    private $connections = [];
     
     public function __construct(App $app, OutputInterface $output)
     {
@@ -65,7 +66,7 @@ class TaskRunner
                 throw new RuntimeException("Task failed: " . $task->getCommandName());
             }
         }
-        return true;
+        return 0;
     }
     
     public function commandInputToText(ArrayInput $commandInput)
@@ -96,21 +97,20 @@ class TaskRunner
     public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
     {
         foreach ($hosts as $host) {
-            $username = 'root';
-            $this->output->writeln(
-                "<comment> * Connecting to " . $host->getName() ."</comment> "
-            );
             $ssh = $this->getSshConnection($host);
             
-            $cmd = '/tmp/droid.phar ' . $command->getName()  . ' "LOL" --ansi';
+            $cmd = 'php /tmp/droid.phar ' . $command->getName()  . ' "LOL" --ansi';
             $out = $ssh->exec($cmd);
 
             echo $out;
             $err = $ssh->getStdError();
             echo $err;
+            $exitCode = $ssh->getExitStatus();
+            if ($exitCode!=0) {
+                throw new RuntimeException("Remote task returned non-zero exitcode: " . $exitCode);
+            }
         }
-
-        $res = true;
+        return 0;
     }
     
     public function prepareCommandInput(Command $command, $arguments, $variables)
@@ -163,6 +163,9 @@ class TaskRunner
     
     protected function getSshConnection(Host $host)
     {
+        if (isset($this->connections[$host->getName()])) {
+            return $this->connections[$host->getName()];
+        }
         $address = $host->getAddress();
         $username = $host->getUsername();
         $port = $host->getPort();
@@ -205,7 +208,38 @@ class TaskRunner
         $timeout = 3;
         
         $ssh->setTimeout($timeout);
+        
+        $localDroid = getcwd() . '/droid.phar';
+        
+        if (!file_exists($localDroid)) {
+            throw new RuntimeException("Local droid not found: " . $localDroid);
+        }
+        
+        $remoteDroid = '/tmp/droid.phar';
+        
+        $sha1 = sha1(file_get_contents($localDroid));
+        
+        
+        $this->output->writeLn(" - Checking remote droid.phar version");
+        $cmd = 'echo "' . $sha1 . ' ' . $remoteDroid .'" > ' . $remoteDroid . '.sha1';
+        $cmd .= ' && sha1sum --status -c ' . $remoteDroid . '.sha1';
+        //echo $cmd . "\n";
+        
+        $res = $ssh->exec($cmd);
+        if ($ssh->getExitStatus() != 0) {
+            $this->output->writeLn(" - Uploading droid (new or updated)... $sha1");
 
+            $scp = new \phpseclib\Net\SCP($ssh);
+            if (!$scp->put(
+                $remoteDroid,
+                $localDroid,
+                \phpseclib\Net\SCP::SOURCE_LOCAL_FILE
+            )) {
+                throw new Exception("Failed to send file");
+            }
+        }
+
+        $this->connections[$host->getName()] = $ssh;
         return $ssh;
     }
 }
