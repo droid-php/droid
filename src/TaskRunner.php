@@ -8,20 +8,28 @@ use Symfony\Component\Console\Application as App;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Droid\Model\Host;
+use Droid\Remote\EnablerInterface;
 use RuntimeException;
+use SSHClient\ClientConfiguration\ClientConfiguration;
+use SSHClient\ClientBuilder\ClientBuilder;
+use Droid\Remote\EnablementException;
+use Symfony\Component\Process\Process;
+
 
 class TaskRunner
 {
     private $output;
     private $app;
     private $connections = [];
-    
-    public function __construct(App $app, OutputInterface $output)
-    {
+
+    public function __construct(
+        App $app, OutputInterface $output, EnablerInterface $enabler
+    ) {
         $this->app = $app;
         $this->output = $output;
+        $this->enabler = $enabler;
     }
-    
+
     public function runTarget($project, $targetName)
     {
         $target = $project->getTargetByName($targetName);
@@ -36,14 +44,14 @@ class TaskRunner
              * This gives the unexpected behaviour that after the first run, the app-definitions are merged
              * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
              */
-             
+
             if (!$command) {
                 throw new RuntimeException("Unsupported command: " . $task->getCommandName());
             }
-            
+
             foreach ($task->getItems() as $item) {
                 $variables = array_merge($project->getVariables(), $target->getVariables());
-                
+
                 $variables['item'] = (string)$item;
                 $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
 
@@ -73,7 +81,7 @@ class TaskRunner
         }
         return 0;
     }
-    
+
     public function commandInputToText(ArrayInput $commandInput)
     {
         $out = '';
@@ -91,33 +99,52 @@ class TaskRunner
         }
         return $out;
     }
-    
+
     public function runLocalCommand(Command $command, ArrayInput $commandInput)
     {
         //$commandInput->setArgument('command', $command->getName());
         $res = $command->run($commandInput, $this->output);
         return $res;
     }
-    
+
     public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
     {
         foreach ($hosts as $host) {
-            $ssh = $this->getSshConnection($host);
-            
-            $cmd = 'php /tmp/droid.phar ' . $command->getName()  . ' "LOL" --ansi';
-            $out = $ssh->exec($cmd);
+            if (! $host->enabled()) {
+                try {
+                    $this->enabler->enable($host);
+                } catch (EnablementException $e) {
+                    throw new RuntimeException('Unable to run remote command', null, $e);
+                }
+            }
+            $ssh = $host->getSshClient();
 
-            echo $out;
-            $err = $ssh->getStdError();
-            echo $err;
-            $exitCode = $ssh->getExitStatus();
+            $outputter = function($type, $buf) {
+                $fmt = '<info>%s</info>';
+                if ($type === Process::ERR) {
+                    $fmt = '<comment>%s</comment>';
+                }
+                foreach (explode("\n", $buf) as $line) {
+                    $this->writeln(sprintf($fmt, $line));
+                }
+            };
+
+            $ssh->exec(
+                array(
+                    'php', '/tmp/droid.phar', $command->getName(),
+                    (string) $commandInput, '--ansi'
+                ),
+                $outputter->bindTo($this->output)
+            );
+
+            $exitCode = $ssh->getExitCode();
             if ($exitCode!=0) {
                 throw new RuntimeException("Remote task returned non-zero exitcode: " . $exitCode);
             }
         }
         return 0;
     }
-    
+
     public function prepareCommandInput(Command $command, $arguments, $variables)
     {
         $variableString = '';
@@ -137,12 +164,12 @@ class TaskRunner
                 $arguments[$name] = $value;
             }
         }
-        
+
         $inputs = [];
         $arguments['command'] = $command->getName();
-        
+
         $definition = $command->getDefinition();
-        
+
         foreach ($definition->getArguments() as $argument) {
             $name = $argument->getName();
             if (isset($arguments[$name])) {
@@ -160,102 +187,8 @@ class TaskRunner
                 $inputs['--' . $name] = $arguments[$name];
             }
         }
-        
+
         $commandInput = new ArrayInput($inputs, $definition);
         return $commandInput;
-    }
-    
-    
-    protected function getSshConnection(Host $host)
-    {
-        if (isset($this->connections[$host->getName()])) {
-            return $this->connections[$host->getName()];
-        }
-        $address = $host->getAddress();
-        $username = $host->getUsername();
-        $port = $host->getPort();
-
-        $this->output->writeLn(" - Connecting: <info>$username@$address:$port</info>");
-        
-        $ssh = new \phpseclib\Net\SSH2($address);
-
-        $res = null;
-        
-        switch ($host->getAuth()) {
-            case 'key':
-                // Load a private key
-                $keyFile = $host->getKeyFile();
-                $key = new \phpseclib\Crypt\RSA();
-                $keyPass = $host->getKeyPass();
-                if ($keyPass) {
-                    $key->setPassword($keyPass);
-                }
-
-                if (!$key->loadKey(file_get_contents($keyFile))) {
-                    throw new RuntimeException("Loading key failed: " . $keyFile);
-                }
-                $res = $ssh->login($username, $key);
-                break;
-            case 'agent':
-                $agent = new \phpseclib\System\SSH\Agent();
-                $res = $ssh->login($username, $agent);
-                break;
-            case 'password':
-                $res = $ssh->login($username, $host->getPassword());
-                break;
-        }
-        
-        if (!$res) {
-            throw new RuntimeException("Login failed: $username@$address:$port");
-        }
-        $ssh->enableQuietMode();
-        
-        $timeout = 3;
-        
-        $ssh->setTimeout($timeout);
-        
-        $this->output->writeLn(" - Checking remote PHP version");
-        $cmd = "php -r \"echo PHP_VERSION_ID;\"";
-        $version = $ssh->exec($cmd);
-        if ($ssh->getExitStatus() != 0) {
-            $err = $ssh->getStdError();
-            echo $err;
-            throw new RuntimeException("Checking remote host failed. Is PHP installed?");
-        }
-        if ($version<50509) {
-            throw new RuntimeException("Remote host PHP version too low: $version");
-        }
-        
-        $localDroid = getcwd() . '/droid.phar';
-        
-        if (!file_exists($localDroid)) {
-            throw new RuntimeException("Local droid not found: " . $localDroid);
-        }
-        
-        $remoteDroid = '/tmp/droid.phar';
-        
-        $sha1 = sha1(file_get_contents($localDroid));
-        
-        $this->output->writeLn(" - Checking remote droid.phar version");
-        $cmd = 'echo "' . $sha1 . ' ' . $remoteDroid .'" > ' . $remoteDroid . '.sha1';
-        $cmd .= ' && sha1sum --status -c ' . $remoteDroid . '.sha1';
-        //echo $cmd . "\n";
-        
-        $res = $ssh->exec($cmd);
-        if ($ssh->getExitStatus() != 0) {
-            $this->output->writeLn(" - Uploading droid (new or updated)... $sha1");
-
-            $scp = new \phpseclib\Net\SCP($ssh);
-            if (!$scp->put(
-                $remoteDroid,
-                $localDroid,
-                \phpseclib\Net\SCP::SOURCE_LOCAL_FILE
-            )) {
-                throw new Exception("Failed to send file");
-            }
-        }
-
-        $this->connections[$host->getName()] = $ssh;
-        return $ssh;
     }
 }
