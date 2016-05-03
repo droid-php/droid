@@ -119,9 +119,6 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $runner->runRemoteCommand($this->command, $this->input, array($this->host));
     }
 
-    /**
-     * @expectedException RuntimeException
-     */
     public function testRunRemoteCommandNonZeroExitCode()
     {
         $this
@@ -145,12 +142,12 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this
             ->sshClient
             ->expects($this->once())
-            ->method('exec')
+            ->method('startExec')
             ->with($this->isType('array'))
         ;
         $this
             ->sshClient
-            ->expects($this->once())
+            ->expects($this->atLeastOnce())
             ->method('getExitCode')
             ->willReturn(1)
         ;
@@ -183,7 +180,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this
             ->sshClient
             ->expects($this->once())
-            ->method('exec')
+            ->method('startExec')
             ->with($this->isType('array'))
         ;
         $this

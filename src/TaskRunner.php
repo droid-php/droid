@@ -109,14 +109,19 @@ class TaskRunner
 
     public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
     {
+        $running = array();
+
         foreach ($hosts as $host) {
+
             if (! $host->enabled()) {
+                # we will wait for a host to be enabled before doing real work
                 try {
                     $this->enabler->enable($host);
                 } catch (EnablementException $e) {
                     throw new RuntimeException('Unable to run remote command', null, $e);
                 }
             }
+
             $ssh = $host->getSshClient();
 
             $outputter = function($type, $buf) {
@@ -129,18 +134,39 @@ class TaskRunner
                 }
             };
 
-            $ssh->exec(
+            $ssh->startExec(
                 array(
                     'php', '/tmp/droid.phar', $command->getName(),
                     (string) $commandInput, '--ansi'
                 ),
                 $outputter->bindTo($this->output)
             );
+            $running[] = array($host, $ssh);
+        }
 
-            $exitCode = $ssh->getExitCode();
-            if ($exitCode!=0) {
-                throw new RuntimeException("Remote task returned non-zero exitcode: " . $exitCode);
+        $failures = array();
+        $tts = sizeof($running);
+        while (sizeof($running)) {
+            if ($tts-- == 0) {
+                $tts = sizeof($running) -1;
+                usleep(200000);
             }
+            list($host, $ssh) = array_shift($running);
+            if ($ssh->isRunning()) {
+                array_push($running, array($host, $ssh));
+            }
+            if ($ssh->getExitCode()) {
+                #throw new RuntimeException("Remote task returned non-zero exitcode: " . $exitCode);
+                $failures[] = array($host, $ssh);
+            }
+        }
+
+        foreach ($failures as list($host, $ssh)) {
+            $this->output->writeln(sprintf(
+                '<comment>[%s] exited with code "%d"</comment>',
+                $host->getName(),
+                $ssh->getExitCode()
+            ));
         }
         return 0;
     }
