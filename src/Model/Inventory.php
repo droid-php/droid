@@ -38,7 +38,15 @@ class Inventory
     {
         $this->hostGroups[$hostGroup->getName()] = $hostGroup;
     }
-    
+
+    public function getHostGroup($name)
+    {
+        if (!$this->hasHostGroup($name)) {
+            throw new RuntimeException("No such host group: " . $name);
+        }
+        return $this->hostGroups[$name];
+    }
+
     public function hasHostGroup($name)
     {
         return isset($this->hostGroups[$name]);
@@ -52,8 +60,7 @@ class Inventory
     public function getHostsByName($name)
     {
         if ($this->hasHostGroup($name)) {
-            $hosts = $this->getHostGroup($name);
-            return $hosts;
+            return $this->getHostGroup($name)->getHosts();
         }
         $hosts = [];
         if ($this->hasHost($name)) {

@@ -101,32 +101,32 @@ class YamlLoader
     private function loadInventory(Inventory $inventory, $data)
     {
         if (isset($data['hosts'])) {
-            foreach ($data['hosts'] as $hostName => $data) {
+            foreach ($data['hosts'] as $hostName => $hostData) {
                 $host = new Host($hostName);
-                if ($data) {
-                    foreach ($data as $key => $value) {
+                if ($hostData) {
+                    foreach ($hostData as $key => $value) {
                         switch ($key) {
                             case 'variables':
-                                $this->loadVariables($data, $host);
+                                $this->loadVariables($hostData, $host);
                                 break;
                             case 'address':
-                                $host->setAddress($data[$key]);
+                                $host->setAddress($hostData[$key]);
                                 break;
                             case 'username':
-                                $host->setUsername($data[$key]);
+                                $host->setUsername($hostData[$key]);
                                 break;
                             case 'password':
-                                $host->setPassword($data[$key]);
+                                $host->setPassword($hostData[$key]);
                                 break;
                             case 'auth':
-                                $host->setAuth($data[$key]);
+                                $host->setAuth($hostData[$key]);
                                 break;
                             case 'keyfile':
-                                $filename = Utils::absoluteFilename($data[$key]);
+                                $filename = Utils::absoluteFilename($hostData[$key]);
                                 $host->setKeyFile($filename);
                                 break;
                             case 'keypass':
-                                $host->setKeyPass($data[$key]);
+                                $host->setKeyPass($hostData[$key]);
                                 break;
                             default:
                                 throw new RuntimeException("Unknown host property: " . $key);
