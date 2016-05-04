@@ -11,7 +11,6 @@ use RuntimeException;
 use Droid\Remote\Enabler;
 use Droid\Remote\Synchroniser;
 use Droid\TaskRunner;
-use Droid\Remote\Droid\Remote;
 
 class TargetRunCommand extends Command
 {

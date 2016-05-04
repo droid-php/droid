@@ -101,55 +101,88 @@ class YamlLoader
     private function loadInventory(Inventory $inventory, $data)
     {
         if (isset($data['hosts'])) {
-            foreach ($data['hosts'] as $hostName => $hostData) {
-                $host = new Host($hostName);
-                if ($hostData) {
-                    foreach ($hostData as $key => $value) {
-                        switch ($key) {
-                            case 'variables':
-                                $this->loadVariables($hostData, $host);
-                                break;
-                            case 'address':
-                                $host->setAddress($hostData[$key]);
-                                break;
-                            case 'username':
-                                $host->setUsername($hostData[$key]);
-                                break;
-                            case 'password':
-                                $host->setPassword($hostData[$key]);
-                                break;
-                            case 'auth':
-                                $host->setAuth($hostData[$key]);
-                                break;
-                            case 'keyfile':
-                                $filename = Utils::absoluteFilename($hostData[$key]);
-                                $host->setKeyFile($filename);
-                                break;
-                            case 'keypass':
-                                $host->setKeyPass($hostData[$key]);
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown host property: " . $key);
+            $this->loadHosts($inventory, $data['hosts']);
+        }
+        if (isset($data['groups'])) {
+            $this->loadHostGroups($inventory, $data['groups']);
+        }
+    }
+
+    private function loadHosts(Inventory $inventory, $hosts)
+    {
+        $want_gateway = array();
+        foreach ($hosts as $hostName => $hostData) {
+            $host = new Host($hostName);
+            $inventory->addHost($host);
+            if (!$hostData) {
+                continue;
+            }
+            foreach ($hostData as $key => $value) {
+                switch ($key) {
+                    case 'variables':
+                        $this->loadVariables($hostData, $host);
+                        break;
+                    case 'address':
+                        $host->setAddress($value);
+                        break;
+                    case 'username':
+                        $host->setUsername($value);
+                        break;
+                    case 'password':
+                        $host->setPassword($value);
+                        break;
+                    case 'auth':
+                        $host->setAuth($value);
+                        break;
+                    case 'keyfile':
+                        $host->setKeyFile(Utils::absoluteFilename($value));
+                        break;
+                    case 'keypass':
+                        $host->setKeyPass($value);
+                        break;
+                    case 'ssh_options':
+                        $host->setSshOptions($value);
+                        break;
+                    case 'ssh_gateway':
+                        if (! $inventory->hasHost($value)) {
+                            $want_gateway[$hostName] = $value;
+                            break;
                         }
-                    }
+                        $host->setSshGateway($inventory->getHost($value));
+                        break;
+                    default:
+                        throw new RuntimeException("Unknown host property: " . $key);
                 }
-                $inventory->addHost($host);
             }
         }
-        
-        if (isset($data['groups'])) {
-            foreach ($data['groups'] as $groupName => $groupNode) {
-                $group = new HostGroup($groupName);
-                foreach ($groupNode['hosts'] as $hostName) {
-                    if (!$inventory->hasHost($hostName)) {
-                        throw new RuntimeException("Group $groupName refers to undefined host: $hostName");
-                    }
-                    $host = $inventory->getHost($hostName);
-                    $group->addHost($host);
-                }
-                $this->loadVariables($groupNode, $group);
-                $inventory->addHostGroup($group);
+        foreach ($want_gateway as $want => $gateway) {
+            if (! $inventory->hasHost($gateway)) {
+                throw new RuntimeException(sprintf(
+                    'Host "%s" requires an unknown host "%s" as its ssh gateway.',
+                    $want,
+                    $gateway
+                ));
             }
+            $inventory
+                ->getHost($want)
+                ->setSshGateway($inventory->getHost($gateway))
+            ;
+        }
+    }
+
+    private function loadHostGroups(Inventory $inventory, $groups)
+    {
+        foreach ($groups as $groupName => $groupNode) {
+            $group = new HostGroup($groupName);
+            foreach ($groupNode['hosts'] as $hostName) {
+                if (!$inventory->hasHost($hostName)) {
+                    throw new RuntimeException("Group $groupName refers to undefined host: $hostName");
+                }
+                $host = $inventory->getHost($hostName);
+                $group->addHost($host);
+            }
+            $this->loadVariables($groupNode, $group);
+            $inventory->addHostGroup($group);
         }
     }
     
