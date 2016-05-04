@@ -64,3 +64,15 @@ targets:
             - deploy_ssh:
                 hosts: %deploy_hosts%
                 sshkey: %deploy_sshkey%
+
+hosts:
+    myhost:
+        username: myuser
+        keyfile: '~/.ssh/id_rsa'
+    my.sekret.host:
+        username: myuser
+        ssh_gateway: gateway_host
+    gateway_host:
+        username: myuser
+        ssh_options:
+            LogLevel: VERBOSE
