@@ -47,7 +47,7 @@ class Synchroniser implements SynchroniserInterface
         if ($digest === false) {
             throw new SynchronisationException(null, sprintf(
                 'Unable to read the droid binary file %s.',
-                 $this->localDroidPath
+                $this->localDroidPath
             ));
         }
         return $digest;
@@ -80,8 +80,8 @@ class Synchroniser implements SynchroniserInterface
         if ($scp->getExitCode()) {
             throw new SynchronisationException($host->getName(), sprintf(
                 'Unable to upload droid: "%s".',
-                implode(' ', explode("\n", $scp->getErrorOutput())))
-            );
+                implode(' ', explode("\n", $scp->getErrorOutput()))
+            ));
         }
     }
 }
