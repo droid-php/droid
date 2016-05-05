@@ -13,6 +13,8 @@ use RuntimeException;
 
 class Application extends ConsoleApplication
 {
+    const DROID_BIN_NAME = 'droid.phar';
+
     protected $project;
     protected $inventory;
     protected $autoLoader;
@@ -136,7 +138,12 @@ class Application extends ConsoleApplication
         }
         return $filename;
     }
-        
+
+    public function getDroidBinaryFilename()
+    {
+        return self::DROID_BIN_NAME;
+    }
+
     public function setAutoLoader($autoLoader)
     {
         $this->autoLoader = $autoLoader;
