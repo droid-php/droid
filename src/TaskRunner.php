@@ -185,14 +185,16 @@ class TaskRunner
         foreach ($arguments as $name => $value) {
             foreach ($variables as $name2 => $value2) {
                 $value = str_replace('{{' . $name2 . '}}', $value2, $value);
-                if ($value[0]=='@') {
-                    $datafile = substr($value, 1);
-                    if (!file_exists($datafile)) {
-                        throw new RuntimeException("Can't load data-file: " . $datafile);
+                if ($value) {
+                    if ($value[0]=='@') {
+                        $datafile = substr($value, 1);
+                        if (!file_exists($datafile)) {
+                            throw new RuntimeException("Can't load data-file: " . $datafile);
+                        }
+                        $data = file_get_contents($datafile);
+                        $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
+                        $value = $data;
                     }
-                    $data = file_get_contents($datafile);
-                    $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
-                    $value = $data;
                 }
                 $arguments[$name] = $value;
             }
