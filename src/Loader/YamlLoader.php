@@ -10,6 +10,8 @@ use Droid\Model\Host;
 use Droid\Model\HostGroup;
 use Droid\Model\RegisteredCommand;
 use Droid\Model\Task;
+use Droid\Model\Firewall;
+use Droid\Model\Rule;
 use Droid\Utils;
 use RuntimeException;
 
@@ -107,12 +109,33 @@ class YamlLoader
             $this->loadHostGroups($inventory, $data['groups']);
         }
     }
+    
+    private function loadRules($obj, $data)
+    {
+        if (isset($data['inbound'])) {
+            foreach ($data['inbound'] as $ruleData) {
+                $rule = new Rule();
+                $rule->setAddress($ruleData['address']);
+                $rule->setPort($ruleData['port']);
+                
+                if (isset($ruleData['action'])) {
+                    $rule->setAction($ruleData['action']);
+                }
+                if (isset($ruleData['direction'])) {
+                    $rule->setAction($ruleData['direction']);
+                }
+                $rule->setDirection('inbound');
+                $obj->addRule($rule);
+            }
+        }
+    }
 
     private function loadHosts(Inventory $inventory, $hosts)
     {
         $want_gateway = array();
         foreach ($hosts as $hostName => $hostData) {
             $host = new Host($hostName);
+            $this->loadRules($host, $hostData);
             $inventory->addHost($host);
             if (!$hostData) {
                 continue;
@@ -159,6 +182,8 @@ class YamlLoader
                         }
                         $host->setSshGateway($inventory->getHost($value));
                         break;
+                    case 'inbound':
+                        break;
                     default:
                         throw new RuntimeException("Unknown host property: " . $key);
                 }
@@ -183,6 +208,8 @@ class YamlLoader
     {
         foreach ($groups as $groupName => $groupNode) {
             $group = new HostGroup($groupName);
+            $this->loadRules($group, $groupNode);
+
             foreach ($groupNode['hosts'] as $hostName) {
                 if (!$inventory->hasHost($hostName)) {
                     throw new RuntimeException("Host group `$groupName` refers to undefined host: `$hostName`");

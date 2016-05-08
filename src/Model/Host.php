@@ -23,7 +23,7 @@ class Host implements AbleInterface
     private $keyFile;
     private $keyPass;
     private $auth;
-
+    use RuleTrait;
     use AbleTrait;
     use SshClientTrait;
     use VariableTrait;

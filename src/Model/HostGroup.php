@@ -8,6 +8,7 @@ class HostGroup
 {
     private $name;
     private $hosts = [];
+    use RuleTrait;
     
     use VariableTrait;
     
