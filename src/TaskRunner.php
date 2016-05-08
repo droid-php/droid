@@ -56,7 +56,7 @@ class TaskRunner
                 $this->output->writeln(
                     "<comment> * Executing: " . $command->getName() ."</comment> " .
                     $this->commandInputToText($commandInput) .
-                    "</comment>"
+                    "on <comment>" . $target->getHosts() . "</comment>"
                 );
 
                 if ($target->getHosts()) {
