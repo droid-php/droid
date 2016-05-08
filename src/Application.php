@@ -114,6 +114,12 @@ class Application extends ConsoleApplication
             }
         }
         
+        foreach ($this->all() as $command) {
+            if (method_exists($command, 'setInventory')) {
+                $command->setInventory($this->inventory);
+            }
+        }
+        
         if ($this->hasProject()) {
             foreach ($this->getProject()->getTargets() as $target) {
                 $command = new \Droid\Command\TargetRunCommand();
