@@ -122,10 +122,10 @@ class TaskRunner
 
             $ssh = $host->getSshClient();
 
-            $outputter = function($type, $buf) {
-                $fmt = '<info>%s</info>';
+            $outputter = function($type, $buf) use ($host) {
+                $fmt = '<fg=black;bg=blue;options=bold> ' . $host->getName() . ' </> %s';
                 if ($type === Process::ERR) {
-                    $fmt = '<comment>%s</comment>';
+                    $fmt = '<error>' . $host->getName() . '</error> %s';
                 }
                 foreach (explode("\n", $buf) as $line) {
                     $this->writeln(sprintf($fmt, $line));
