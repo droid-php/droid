@@ -16,7 +16,7 @@ class SshConfig extends ClientConfiguration
     public function __construct(Host $host)
     {
         $this->host = $host;
-        return parent::__construct($host->getName(), $host->getUsername());
+        return parent::__construct($host->getConnectionIp(), $host->getUsername());
     }
 
     public function getOptions()
@@ -27,7 +27,7 @@ class SshConfig extends ClientConfiguration
                 $opts['IdentityFile'] = $this->host->getKeyFile();
                 $opts['IdentitiesOnly'] = 'yes';
             }
-            if ($this->host->getPort() && $this->host->getPort() != 22) {
+            if ($this->host->getConnectionPort() && $this->host->getConnectionPort() != 22) {
                 $opts['Port'] = $this->host->getPort();
             }
             if ($this->host->getSshGateway()) {

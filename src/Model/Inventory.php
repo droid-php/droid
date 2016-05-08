@@ -59,12 +59,23 @@ class Inventory
     
     public function getHostsByName($name)
     {
-        if ($this->hasHostGroup($name)) {
-            return $this->getHostGroup($name)->getHosts();
-        }
+        $name = str_replace(' ', ',', $name);
+        $names = explode(",", $name);
         $hosts = [];
-        if ($this->hasHost($name)) {
-            $hosts[] = $this->getHost($name);
+        foreach ($names as $name) {
+            if ($name) {
+                $found = false;
+                if ($this->hasHostGroup($name)) {
+                    foreach ($this->getHostGroup($name)->getHosts() as $host) {
+                        $hosts[$host->getName()] = $host;
+                    }
+                } elseif ($this->hasHost($name)) {
+                    $host = $this->getHost($name);
+                    $hosts[$host->getName()] = $host;
+                } else {
+                    throw new RuntimeException("Unknown host (group): " . $name);
+                }
+            }
         }
         return $hosts;
     }

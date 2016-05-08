@@ -122,8 +122,17 @@ class YamlLoader
                     case 'variables':
                         $this->loadVariables($hostData, $host);
                         break;
-                    case 'address':
-                        $host->setAddress($value);
+                    case 'public_ip':
+                        $host->setPublicIp($value);
+                        break;
+                    case 'private_ip':
+                        $host->setPrivateIp($value);
+                        break;
+                    case 'public_port':
+                        $host->setPublicPort($value);
+                        break;
+                    case 'private_port':
+                        $host->setPrivatePort($value);
                         break;
                     case 'username':
                         $host->setUsername($value);
@@ -176,7 +185,7 @@ class YamlLoader
             $group = new HostGroup($groupName);
             foreach ($groupNode['hosts'] as $hostName) {
                 if (!$inventory->hasHost($hostName)) {
-                    throw new RuntimeException("Group $groupName refers to undefined host: $hostName");
+                    throw new RuntimeException("Host group `$groupName` refers to undefined host: `$hostName`");
                 }
                 $host = $inventory->getHost($hostName);
                 $group->addHost($host);

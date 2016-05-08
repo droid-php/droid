@@ -32,19 +32,26 @@ class InventoryCommand extends Command
             $output->writeln("- $name=`$value`");
         }
         
+        $output->writeln("HOSTS");
         foreach ($inventory->getHosts() as $host) {
-            $output->writeln("<info>Host " . $host->getName() . "</info>");
-            $output->writeln("   Auth: " . $host->getAuth());
+            $output->writeln('   <comment>'. $host->getName() . "</comment>");
+            $output->writeln("      Public: " . $host->getPublicIp() . ':' . $host->getPublicPort());
+            if ($host->getPrivateIp()) {
+                $output->writeln("      Private: " . $host->getPrivateIp() . ':' . $host->getPrivatePort());
+            }
+            
+            $output->writeln("      Auth: " . $host->getAuth());
             foreach ($host->getVariables() as $name => $value) {
-                $output->writeln("    - $name=`$value`");
+                $output->writeln("      - $name=`$value`");
             }
         }
 
+        $output->writeln("HOST GROUPS");
         foreach ($inventory->getHostGroups() as $group) {
-            $output->write("<info>Group " . $group->getName() . "</info>: ");
+            $output->write("   <info>" . $group->getName() . "</info>: ");
             $hostnames ='';
             foreach ($group->getHosts() as $host) {
-                $hostnames .= '<comment>' . $host->getName() . '</comment>, ';
+                $hostnames .= '<comment>' . trim($host->getName()) . '</comment>, ';
             }
             $output->writeln(trim($hostnames, ' ,'));
 

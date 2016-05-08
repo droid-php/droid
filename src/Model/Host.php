@@ -12,7 +12,12 @@ class Host implements AbleInterface
 {
     private $name;
     private $address;
-    private $port;
+    
+    private $public_ip;
+    private $private_ip;
+    private $public_port;
+    private $private_port;
+    
     private $username;
     private $password;
     private $keyFile;
@@ -27,7 +32,8 @@ class Host implements AbleInterface
     {
         $this->name = $name;
         $this->address = $name;
-        $this->port = 22;
+        $this->public_port = 22;
+        $this->private_port = 22;
         $this->username = 'root';
         $this->auth = 'agent';
     }
@@ -37,27 +43,64 @@ class Host implements AbleInterface
         return $this->name;
     }
 
-    public function getAddress()
+    public function getPublicIp()
     {
-        return $this->address;
+        if (!$this->public_ip) {
+            return gethostbyname($this->getName());
+        }
+        return $this->public_ip;
     }
 
-    public function setAddress($address)
+    public function setPublicIp($ip)
     {
-        $this->address = $address;
+        $this->public_ip = $ip;
+        return $this;
+    }
+
+    public function getPrivateIp()
+    {
+        return $this->private_ip;
+    }
+
+    public function setPrivateIp($ip)
+    {
+        $this->private_ip = $ip;
+        return $this;
+    }
+
+    public function getPublicPort()
+    {
+        return $this->public_port;
+    }
+
+    public function setPublicPort($port)
+    {
+        $this->public_port = $port;
         return $this;
     }
 
 
-    public function getPort()
+    public function getPrivatePort()
     {
-        return $this->port;
+        return $this->private_port;
     }
 
-    public function setPort($port)
+    public function setPrivatePort($port)
     {
-        $this->port = $port;
+        $this->private_port = $port;
         return $this;
+    }
+    
+    public function getConnectionIp()
+    {
+        // TODO: Allow to use public or private ip
+        return $this->getPublicIp();
+    }
+
+    public function getConnectionPort()
+    {
+        // TODO: Allow to use public or private port
+        return $this->getPublicPort();
     }
 
     public function getUsername()
