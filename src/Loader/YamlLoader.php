@@ -19,14 +19,36 @@ class YamlLoader
 {
     public function load(Project $project, Inventory $inventory, $filename)
     {
+        $data = $this->loadYaml($filename);
+        $this->loadProject($project, $data);
+        $this->loadInventory($inventory, $data);
+    }
+    
+    public function loadYaml($filename)
+    {
         if (!file_exists($filename)) {
             throw new RuntimeException("File not found: $filename");
         }
         
         $parser = new YamlParser();
         $data = $parser->parse(file_get_contents($filename));
-        $this->loadProject($project, $data);
-        $this->loadInventory($inventory, $data);
+        if (isset($data['include'])) {
+            foreach ($data['include'] as $line) {
+                $filenames = glob($line);
+                if (count($filenames)==0) {
+                    throw new RuntimeException("Include(s) not found: " . $line);
+                }
+                foreach ($filenames as $filename) {
+                    if (!file_exists($filename)) {
+                        throw new RuntimeException("Include filename does not exist: " . $filename);
+                    }
+                    $includeData = $this->loadYaml($filename);
+                    $data = array_merge_recursive($data, $includeData);
+                }
+            }
+        }
+        return $data;
+
     }
     
     private function loadProject(Project $project, $data)
