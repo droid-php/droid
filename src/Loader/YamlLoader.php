@@ -21,6 +21,7 @@ class YamlLoader
     public function load(Project $project, Inventory $inventory, $filename)
     {
         $this->modulePaths[] = 'modules';
+        $this->modulePaths[] = 'droid-vendor';
         $data = $this->loadYaml($filename);
         $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
@@ -97,6 +98,13 @@ class YamlLoader
         }
     }
     
+    protected $ignoreModules = false;
+    
+    public function setIgnoreModules($flag)
+    {
+        $this->ignoreModules = $flag;
+    }
+    
     protected $modulePaths = [];
     public function getModulePaths()
     {
@@ -111,12 +119,18 @@ class YamlLoader
                 return $modulePath;
             }
         }
+        if ($this->ignoreModules) {
+            return;
+        }
         throw new RuntimeException("Module path not found for: " . $module->getName());
     }
     
     public function loadModule(Module $module)
     {
         $path = $this->getModulePath($module);
+        if (!$path) {
+            return null;
+        }
         $filename = $path . '/droid.yml';
         $data = $this->loadYaml($filename);
         $module->setDescription($data['project']['description']);

@@ -27,12 +27,16 @@ class Application extends ConsoleApplication
 
         $this->setName('Droid');
         $this->setVersion('1.0.0');
+        $loader = new YamlLoader();
         
         // extract --droid-config argument, before interpreting other arguments
         foreach ($_SERVER['argv'] as $i => $argument) {
             if (substr($argument, 0, 15)=='--droid-config=') {
                 $this->droidConfig = substr($argument, 15);
                 unset($_SERVER['argv'][$i]);
+            }
+            if (substr($argument, 0, 14)=='module:install') {
+                $loader->setIgnoreModules(true);
             }
         }
 
@@ -41,7 +45,7 @@ class Application extends ConsoleApplication
         if (file_exists($filename)) {
             $this->project = new Project($filename);
             $this->inventory = new Inventory();
-            $loader = new YamlLoader();
+            
             $loader->load($this->project, $this->inventory, $filename);
         } else {
             //exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
