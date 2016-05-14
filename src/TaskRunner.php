@@ -10,7 +10,7 @@ use Symfony\Component\Console\Application as App;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Process\Process;
-
+use Droid\Model\Task;
 use Droid\Remote\EnablementException;
 use Droid\Remote\EnablerInterface;
 
@@ -21,11 +21,58 @@ class TaskRunner
     private $connections = [];
 
     public function __construct(
-        App $app, OutputInterface $output, EnablerInterface $enabler
+        App $app,
+        OutputInterface $output,
+        EnablerInterface $enabler
     ) {
         $this->app = $app;
         $this->output = $output;
         $this->enabler = $enabler;
+    }
+    
+    public function runTask(Task $task, $variables, $hosts)
+    {
+        $command = $this->app->find($task->getCommandName());
+        /* NOTE: The command instance gets reused between tasks.
+         * This gives the unexpected behaviour that after the first run, the app-definitions are merged
+         * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
+         */
+
+        if (!$command) {
+            throw new RuntimeException("Unsupported command: " . $task->getCommandName());
+        }
+
+        foreach ($task->getItems() as $item) {
+            $variables['item'] = (string)$item;
+            $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
+
+            $out = "<comment> * Executing: " . $command->getName() ."</comment> ";
+            $out .= $this->commandInputToText($commandInput);
+            if ($hosts) {
+                $out .= "on <comment>" . $hosts . "</comment>";
+            } else {
+                $out .= "on <comment>local machine</comment>";
+            }
+            
+            $this->output->writeln($out);
+
+            if ($hosts) {
+                if (!$this->app->hasInventory()) {
+                    throw new RuntimeException(
+                        "Can't run remote commands without inventory, please use --droid-inventory"
+                    );
+                }
+                $inventory = $this->app->getInventory();
+                $hosts = $inventory->getHostsByName($hosts);
+
+                $res = $this->runRemoteCommand($command, $commandInput, $hosts);
+            } else {
+                $res = $this->runLocalCommand($command, $commandInput);
+            }
+            if ($res) {
+                throw new RuntimeException("Task failed: " . $task->getCommandName());
+            }
+        }
     }
 
     public function runTarget($project, $targetName)
@@ -35,48 +82,18 @@ class TaskRunner
             throw new RuntimeException("Target not found: " . $targetName);
         }
 
-        foreach ($target->getTasks() as $task) {
-
-            $command = $this->app->find($task->getCommandName());
-            /* NOTE: The command instance gets reused between tasks.
-             * This gives the unexpected behaviour that after the first run, the app-definitions are merged
-             * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
-             */
-
-            if (!$command) {
-                throw new RuntimeException("Unsupported command: " . $task->getCommandName());
-            }
-
-            foreach ($task->getItems() as $item) {
-                $variables = array_merge($project->getVariables(), $target->getVariables());
-
-                $variables['item'] = (string)$item;
-                $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
-
-                $this->output->writeln(
-                    "<comment> * Executing: " . $command->getName() ."</comment> " .
-                    $this->commandInputToText($commandInput) .
-                    "on <comment>" . $target->getHosts() . "</comment>"
-                );
-
-                if ($target->getHosts()) {
-                    if (!$this->app->hasInventory()) {
-                        throw new RuntimeException(
-                            "Can't run remote commands without inventory, please use --droid-inventory"
-                        );
-                    }
-                    $inventory = $this->app->getInventory();
-                    $hosts = $inventory->getHostsByName($target->getHosts());
-
-                    $res = $this->runRemoteCommand($command, $commandInput, $hosts);
-                } else {
-                    $res = $this->runLocalCommand($command, $commandInput);
-                }
-                if ($res) {
-                    throw new RuntimeException("Task failed: " . $task->getCommandName());
-                }
+        foreach ($target->getModules() as $module) {
+            foreach ($module->getTasks() as $task) {
+                $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
+                $this->runTask($task, $variables, $target->getHosts());
             }
         }
+
+        foreach ($target->getTasks() as $task) {
+            $variables = array_merge($project->getVariables(), $target->getVariables());
+            $this->runTask($task, $variables, $target->getHosts());
+        }
+
         return 0;
     }
 

@@ -6,9 +6,10 @@ class Target
 {
     private $name;
     private $hosts;
-    private $tasks = [];
     
     use VariableTrait;
+    use TaskTrait;
+    use ModuleTrait;
     
     public function __construct($name)
     {
@@ -18,16 +19,6 @@ class Target
     public function getName()
     {
         return $this->name;
-    }
-    
-    public function addTask(Task $task)
-    {
-        $this->tasks[] = $task;
-    }
-    
-    public function getTasks()
-    {
-        return $this->tasks;
     }
     
     public function getHosts()

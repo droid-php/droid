@@ -12,6 +12,7 @@ use Droid\Model\RegisteredCommand;
 use Droid\Model\Task;
 use Droid\Model\Firewall;
 use Droid\Model\Rule;
+use Droid\Model\Module;
 use Droid\Utils;
 use RuntimeException;
 
@@ -19,6 +20,7 @@ class YamlLoader
 {
     public function load(Project $project, Inventory $inventory, $filename)
     {
+        $this->modulePaths[] = 'modules';
         $data = $this->loadYaml($filename);
         $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
@@ -26,6 +28,7 @@ class YamlLoader
     
     public function loadYaml($filename)
     {
+
         if (!file_exists($filename)) {
             throw new RuntimeException("File not found: $filename");
         }
@@ -63,6 +66,14 @@ class YamlLoader
                 }
             }
         }
+        
+        if (isset($data['modules'])) {
+            foreach ($data['modules'] as $name => $source) {
+                $module = new Module($name, $source);
+                $this->loadModule($module);
+                $project->addModule($module);
+            }
+        }
 
         
         if (isset($data['targets'])) {
@@ -75,51 +86,42 @@ class YamlLoader
                     $target->setHosts($targetNode['hosts']);
                 }
                 
-                if (isset($targetNode['tasks'])) {
-                    foreach ($targetNode['tasks'] as $taskNode) {
-                        $task = new Task();
-                        foreach ($taskNode as $key => $value) {
-                            switch ($key) {
-                                case 'name':
-                                    $task->setName($taskNode[$key]);
-                                    break;
-                                case 'command':
-                                    $task->setCommandName($taskNode[$key]);
-                                    break;
-                                case 'with_items':
-                                    $task->setItems($taskNode[$key]);
-                                    break;
-                                case 'arguments':
-                                    foreach ($taskNode['arguments'] as $var => $val) {
-                                        $task->setArgument($var, $val);
-                                    }
-                                    break;
-                                default:
-                                    // Assume commandname
-                                    $task->setCommandName($key);
-                                    if (is_array($value)) {
-                                        foreach ($value as $var => $val) {
-                                            $task->setArgument($var, $val);
-                                        }
-                                    }
-                                    if (is_string($value)) {
-                                        preg_match_all(
-                                            "/(\w+)[\s]*=[\s]*((?:[^\"'\s]+)|'(?:[^']*)'|\"(?:[^\"]*)\")/",
-                                            $value,
-                                            $matches
-                                        );
-                                        for ($i=0; $i<count($matches[1]); $i++) {
-                                            $val = trim($matches[2][$i], " \"");
-                                            $task->setArgument($matches[1][$i], $val);
-                                        }
-                                    }
-                            }
-                        }
-                        $target->addTask($task);
+                if (isset($targetNode['modules'])) {
+                    foreach ($targetNode['modules'] as $moduleName) {
+                        $project->getModule($moduleName);
+                        $target->addModule($module);
                     }
                 }
+                $this->loadTasks($targetNode, $target);
             }
         }
+    }
+    
+    protected $modulePaths = [];
+    public function getModulePaths()
+    {
+        return $this->modulePaths;
+    }
+    
+    public function getModulePath(Module $module)
+    {
+        foreach ($this->getModulePaths() as $path) {
+            $modulePath = $path . '/' . $module->getName();
+            if (file_exists($modulePath . '/droid.yml')) {
+                return $modulePath;
+            }
+        }
+        throw new RuntimeException("Module path not found for: " . $module->getName());
+    }
+    
+    public function loadModule(Module $module)
+    {
+        $path = $this->getModulePath($module);
+        $filename = $path . '/droid.yml';
+        $data = $this->loadYaml($filename);
+        $module->setDescription($data['project']['description']);
+        $this->loadVariables($data, $module);
+        $this->loadTasks($data, $module);
     }
     
     private function loadInventory(Inventory $inventory, $data)
@@ -250,6 +252,54 @@ class YamlLoader
             foreach ($data['variables'] as $name => $value) {
                 $obj->setVariable($name, $value);
             }
+        }
+    }
+    
+    public function loadTasks($data, $obj)
+    {
+        if (!isset($data['tasks'])) {
+            return;
+        }
+        foreach ($data['tasks'] as $taskNode) {
+            $task = new Task();
+            foreach ($taskNode as $key => $value) {
+                switch ($key) {
+                    case 'name':
+                        $task->setName($taskNode[$key]);
+                        break;
+                    case 'command':
+                        $task->setCommandName($taskNode[$key]);
+                        break;
+                    case 'with_items':
+                        $task->setItems($taskNode[$key]);
+                        break;
+                    case 'arguments':
+                        foreach ($taskNode['arguments'] as $var => $val) {
+                            $task->setArgument($var, $val);
+                        }
+                        break;
+                    default:
+                        // Assume commandname
+                        $task->setCommandName($key);
+                        if (is_array($value)) {
+                            foreach ($value as $var => $val) {
+                                $task->setArgument($var, $val);
+                            }
+                        }
+                        if (is_string($value)) {
+                            preg_match_all(
+                                "/(\w+)[\s]*=[\s]*((?:[^\"'\s]+)|'(?:[^']*)'|\"(?:[^\"]*)\")/",
+                                $value,
+                                $matches
+                            );
+                            for ($i=0; $i<count($matches[1]); $i++) {
+                                $val = trim($matches[2][$i], " \"");
+                                $task->setArgument($matches[1][$i], $val);
+                            }
+                        }
+                }
+            }
+            $obj->addTask($task);
         }
     }
 }

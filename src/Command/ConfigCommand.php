@@ -28,14 +28,23 @@ class ConfigCommand extends Command
         $output->writeln("Droid configuration:");
         $project = $this->getApplication()->getProject();
 
-        $output->writeln("Targets: ");
+        $output->writeln("Modules: ");
+        foreach ($project->getModules() as $module) {
+            $output->writeln("<info>Module: " . $module->getName() . "</info> " . $module->getSource());
+            $output->writeLn("     Description: " . $module->getDescription());
+            $output->writeln("     Variables: " . $module->getVariablesAsString());
+        }
         
         foreach ($project->getTargets() as $target) {
             $output->writeln("<info>Target: " . $target->getName() . "</info>");
             if ($target->getHosts()) {
                 $output->writeln("     Hosts: " . $target->getHosts());
             }
+            
             $output->writeln("     Variables: " . $target->getVariablesAsString());
+            foreach ($target->getModules() as $module) {
+                $output->writeln("    <comment> Module: <info>" . $module->getName() . "</info></comment>");
+            }
             foreach ($target->getTasks() as $task) {
                 $output->writeln("    <comment> Task: <info>" . $task->getName() . "</info> " . $task->getCommandName() . "</comment>");
                 $arguments = $task->getArguments();

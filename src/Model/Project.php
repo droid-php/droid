@@ -13,6 +13,7 @@ class Project
     private $basePath;
     
     use VariableTrait;
+    use ModuleTrait;
     
     public function __construct($filename)
     {
