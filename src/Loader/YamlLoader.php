@@ -89,7 +89,7 @@ class YamlLoader
                 
                 if (isset($targetNode['modules'])) {
                     foreach ($targetNode['modules'] as $moduleName) {
-                        $project->getModule($moduleName);
+                        $module = $project->getModule($moduleName);
                         $target->addModule($module);
                     }
                 }
