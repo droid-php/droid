@@ -10,9 +10,11 @@ use Symfony\Component\Console\Application as App;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\ProcessBuilder;
 use Droid\Model\Task;
 use Droid\Remote\EnablementException;
 use Droid\Remote\EnablerInterface;
+use LightnCandy\LightnCandy;
 
 class TaskRunner
 {
@@ -36,14 +38,28 @@ class TaskRunner
         /* NOTE: The command instance gets reused between tasks.
          * This gives the unexpected behaviour that after the first run, the app-definitions are merged
          * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
+         *
+         * The issue is now resolved as tasks are now executed in external process (runLocalCommand)
+         * but will return if the command is called with ->run
          */
 
         if (!$command) {
             throw new RuntimeException("Unsupported command: " . $task->getCommandName());
         }
-
-        foreach ($task->getItems() as $item) {
-            $variables['item'] = (string)$item;
+        $items = $task->getItems();
+        if (is_string($items)) {
+            // it's a variable name, resolve it into an array
+            $var = $items;
+            if (!isset($variables[$var])) {
+                throw new RuntimeException("Items is refering to non-existant variable: " . $var);
+            }
+            $items = $variables[$var];
+        }
+        if (!is_array($items)) {
+            throw new RuntimeException("Items is not an array: " . gettype($items));
+        }
+        foreach ($items as $item) {
+            $variables['item'] = $item;
             $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
 
             $out = "<comment> * Executing: " . $command->getName() ."</comment> ";
@@ -51,7 +67,7 @@ class TaskRunner
             if ($hosts) {
                 $out .= "on <comment>" . $hosts . "</comment>";
             } else {
-                $out .= "on <comment>local machine</comment>";
+                $out .= "on <comment>local</comment>";
             }
             
             $this->output->writeln($out);
@@ -63,9 +79,9 @@ class TaskRunner
                     );
                 }
                 $inventory = $this->app->getInventory();
-                $hosts = $inventory->getHostsByName($hosts);
+                $hostArray = $inventory->getHostsByName($hosts);
 
-                $res = $this->runRemoteCommand($command, $commandInput, $hosts);
+                $res = $this->runRemoteCommand($command, $commandInput, $hostArray);
             } else {
                 $res = $this->runLocalCommand($command, $commandInput);
             }
@@ -85,13 +101,21 @@ class TaskRunner
         foreach ($target->getModules() as $module) {
             foreach ($module->getTasks() as $task) {
                 $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
-                $this->runTask($task, $variables, $target->getHosts());
+                $hosts = $target->getHosts();
+                if ($task->getHosts()!='') {
+                    $hosts = $task->getHosts();
+                }
+                $this->runTask($task, $variables, $hosts);
             }
         }
 
         foreach ($target->getTasks() as $task) {
             $variables = array_merge($project->getVariables(), $target->getVariables());
-            $this->runTask($task, $variables, $target->getHosts());
+            $hosts = $target->getHosts();
+            if ($task->getHosts()) {
+                $hosts = $task->getHosts();
+            }
+            $this->runTask($task, $variables, $hosts);
         }
 
         return 0;
@@ -118,8 +142,28 @@ class TaskRunner
     public function runLocalCommand(Command $command, ArrayInput $commandInput)
     {
         //$commandInput->setArgument('command', $command->getName());
-        $res = $command->run($commandInput, $this->output);
-        return $res;
+        //$res = $command->run($commandInput, $this->output);
+        
+        $argv = $_SERVER['argv'];
+        $filename = $argv[0];
+        $process = new Process($filename . ' ' . $command->getName() . ' ' . (string)$commandInput . ' --ansi');
+        if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+            $this->output->writeLn("Full command-line: " . $process->getCommandLine());
+        }
+        
+        $process->start();
+        $output = $this->output;
+        $process->wait(function ($type, $buf) use ($output) {
+            $fmt = '   <fg=black;bg=blue;options=bold> local </> %s';
+            if ($type === Process::ERR) {
+                $fmt = '   <error> local </error> %s';
+            }
+            foreach (explode("\n", $buf) as $line) {
+                $output->writeln(sprintf($fmt, $line));
+            }
+        });
+        
+        return $process->getExitCode();
     }
 
     public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
@@ -127,8 +171,7 @@ class TaskRunner
         $running = array();
 
         foreach ($hosts as $host) {
-
-            if (! $host->enabled()) {
+            if (!$host->enabled()) {
                 # we will wait for a host to be enabled before doing real work
                 try {
                     $this->enabler->enable($host);
@@ -139,21 +182,32 @@ class TaskRunner
 
             $ssh = $host->getSshClient();
 
-            $outputter = function($type, $buf) use ($host) {
-                $fmt = '<fg=black;bg=blue;options=bold> ' . $host->getName() . ' </> %s';
+            $outputter = function ($type, $buf) use ($host) {
+                $fmt = '   <fg=black;bg=blue;options=bold> ' . $host->getName() . ' </> %s';
                 if ($type === Process::ERR) {
-                    $fmt = '<error>' . $host->getName() . '</error> %s';
+                    $fmt = '   <error> ' . $host->getName() . ' </error> %s';
                 }
                 foreach (explode("\n", $buf) as $line) {
                     $this->writeln(sprintf($fmt, $line));
                 }
             };
 
+            
+            $cmd = array(
+                'php', '/tmp/droid.phar', $command->getName(),
+                (string)$commandInput, '--ansi'
+            );
+            
+            if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+                $this->output->writeLn(
+                    "Full command-line on " .
+                    $host->getName() . ": " .
+                    json_encode($cmd, JSON_UNESCAPED_SLASHES)
+                );
+            }
+
             $ssh->startExec(
-                array(
-                    'php', '/tmp/droid.phar', $command->getName(),
-                    (string) $commandInput, '--ansi'
-                ),
+                $cmd,
                 $outputter->bindTo($this->output)
             );
             $running[] = array($host, $ssh);
@@ -178,7 +232,7 @@ class TaskRunner
 
         foreach ($failures as list($host, $ssh)) {
             $this->output->writeln(sprintf(
-                '<comment>[%s] exited with code "%d"</comment>',
+                '<error>[%s] exited with code "%d"</error>',
                 $host->getName(),
                 $ssh->getExitCode()
             ));
@@ -190,7 +244,17 @@ class TaskRunner
     {
         $variableString = '';
         foreach ($variables as $name => $value) {
-            $variableString .= ' ' . $name . '=`<info>' . $value . '</info>`';
+            switch (gettype($value)) {
+                case 'string':
+                    $valueText = $value;
+                    break;
+                case 'array':
+                    $valueText = json_encode($value);
+                    break;
+                default:
+                    $valueText = '{' . gettype($value) . '}';
+            }
+            $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
         }
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
             $this->output->writeln(
@@ -200,21 +264,27 @@ class TaskRunner
 
         // Variable substitution in arguments
         foreach ($arguments as $name => $value) {
-            foreach ($variables as $name2 => $value2) {
-                $value = str_replace('{{' . $name2 . '}}', $value2, $value);
-                if ($value) {
-                    if ($value[0]=='@') {
-                        $datafile = substr($value, 1);
-                        if (!file_exists($datafile)) {
-                            throw new RuntimeException("Can't load data-file: " . $datafile);
-                        }
-                        $data = file_get_contents($datafile);
-                        $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
-                        $value = $data;
+            $php = LightnCandy::compile($value);
+            $renderer = LightnCandy::prepare($php);
+            $value = $renderer($variables);
+            
+            if ($value) {
+                if (($value[0]=='@') || ($value[0]=='!')) {
+                    $datafile = substr($value, 1);
+                    if (!file_exists($datafile)) {
+                        throw new RuntimeException("Can't load data-file: " . $datafile);
                     }
+                    $data = file_get_contents($datafile);
+                    if ($value[0]=='!') {
+                        $php = LightnCandy::compile($data);
+                        $renderer = LightnCandy::prepare($php);
+                        $data = $renderer($variables);
+                    }
+                    $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
+                    $value = $data;
                 }
-                $arguments[$name] = $value;
             }
+            $arguments[$name] = $value;
         }
 
         $inputs = [];
@@ -225,7 +295,7 @@ class TaskRunner
         foreach ($definition->getArguments() as $argument) {
             $name = $argument->getName();
             if (isset($arguments[$name])) {
-                $inputs[$name]=$arguments[$name];
+                $inputs[$name] = $arguments[$name];
             } else {
                 if ($argument->isRequired()) {
                     throw new RuntimeException("Missing required argument: " . $name);
