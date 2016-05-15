@@ -8,9 +8,11 @@ use RuntimeException;
 class Task
 {
     private $name;
+    private $type = 'task';
     private $commandName;
     private $arguments = [];
     private $items = [];
+    private $triggers = [];
     
     public function setArgument($name, $value)
     {
@@ -61,6 +63,18 @@ class Task
         return $this;
     }
     
+    public function getType()
+    {
+        return $this->type;
+    }
+    
+    public function setType($type)
+    {
+        $this->type = $type;
+        return $this;
+    }
+    
+    
     public function setItems($items)
     {
         $this->items = $items;
@@ -86,6 +100,29 @@ class Task
     public function setHosts($hosts)
     {
         $this->hosts = $hosts;
+        return $this;
+    }
+    
+    public function addTrigger($name)
+    {
+        $this->triggers[$name] = $name;
+    }
+    
+    public function getTriggers()
+    {
+        return $this->triggers;
+    }
+    
+    protected $changed = false;
+    
+    public function getChanged()
+    {
+        return $this->changed;
+    }
+    
+    public function setChanged($changed)
+    {
+        $this->changed = $changed;
         return $this;
     }
 }

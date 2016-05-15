@@ -62,7 +62,7 @@ class TaskRunner
             $variables['item'] = $item;
             $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
 
-            $out = "<comment> * Executing: " . $command->getName() ."</comment> ";
+            $out = "<comment>" . ucfirst($task->getType()) . " `" . $task->getName() . "`</comment>: <info>" . $command->getName() ."</info> ";
             $out .= $this->commandInputToText($commandInput);
             if ($hosts) {
                 $out .= "on <comment>" . $hosts . "</comment>";
@@ -81,9 +81,9 @@ class TaskRunner
                 $inventory = $this->app->getInventory();
                 $hostArray = $inventory->getHostsByName($hosts);
 
-                $res = $this->runRemoteCommand($command, $commandInput, $hostArray);
+                $res = $this->runRemoteCommand($task, $command, $commandInput, $hostArray);
             } else {
-                $res = $this->runLocalCommand($command, $commandInput);
+                $res = $this->runLocalCommand($task, $command, $commandInput);
             }
             if ($res) {
                 throw new RuntimeException("Task failed: " . $task->getCommandName());
@@ -99,7 +99,8 @@ class TaskRunner
         }
 
         foreach ($target->getModules() as $module) {
-            foreach ($module->getTasks() as $task) {
+            $tasks = $module->getTasksByType('task');
+            foreach ($tasks as $task) {
                 $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
                 $hosts = $target->getHosts();
                 if ($task->getHosts()!='') {
@@ -109,8 +110,32 @@ class TaskRunner
             }
         }
 
-        foreach ($target->getTasks() as $task) {
+        $tasks = $target->getTasksByType('task');
+        foreach ($tasks as $task) {
             $variables = array_merge($project->getVariables(), $target->getVariables());
+            $hosts = $target->getHosts();
+            if ($task->getHosts()) {
+                $hosts = $task->getHosts();
+            }
+            $this->runTask($task, $variables, $hosts);
+        }
+
+        // Build up '$triggers' array for all changed tasks
+        $triggers = [];
+        foreach ($tasks as $task) {
+            if ($task->getChanged()) {
+                foreach ($task->getTriggers() as $name) {
+                    $triggers[$name] = $name;
+                }
+            }
+        }
+
+        // Call all triggered handlers
+        foreach ($triggers as $name) {
+            $task = $target->getTaskByName($name);
+            if (!$task) {
+                throw new RuntimeException("Unknown trigger: " . $name);
+            }
             $hosts = $target->getHosts();
             if ($task->getHosts()) {
                 $hosts = $task->getHosts();
@@ -138,8 +163,33 @@ class TaskRunner
         }
         return $out;
     }
+    
+    public function taskOutput(Task $task, $type, $buf, $hostname)
+    {
+        $fmt = '<fg=black;bg=blue;options=reverse>' . $hostname . '</> %s';
+        if ($type === Process::ERR) {
+            $fmt = '<error>' . $hostname . '</error> %s';
+        }
+        
+        foreach (explode("\n", $buf) as $line) {
+            if ($line!='') {
+                if (substr($line, 0, 14)=='[DROID-RESULT]') {
+                    $json = substr($line, 15);
+                    $data = json_decode($json, true);
+                    
+                    if (isset($data['changed']) && ($data['changed']=='true')) {
+                        $task->setChanged(true);
+                    }
+                    
+                    $this->output->writeln(sprintf($fmt, '<fg=cyan>' . $json . '</>'));
+                } else {
+                    $this->output->writeln(sprintf($fmt, $line));
+                }
+            }
+        }
+    }
 
-    public function runLocalCommand(Command $command, ArrayInput $commandInput)
+    public function runLocalCommand(Task $task, Command $command, ArrayInput $commandInput)
     {
         //$commandInput->setArgument('command', $command->getName());
         //$res = $command->run($commandInput, $this->output);
@@ -153,20 +203,14 @@ class TaskRunner
         
         $process->start();
         $output = $this->output;
-        $process->wait(function ($type, $buf) use ($output) {
-            $fmt = '   <fg=black;bg=blue;options=bold> local </> %s';
-            if ($type === Process::ERR) {
-                $fmt = '   <error> local </error> %s';
-            }
-            foreach (explode("\n", $buf) as $line) {
-                $output->writeln(sprintf($fmt, $line));
-            }
+        $process->wait(function ($type, $buf) use ($task, $output) {
+            $this->taskOutput($task, $type, $buf, 'localhost');
         });
         
         return $process->getExitCode();
     }
 
-    public function runRemoteCommand(Command $command, ArrayInput $commandInput, $hosts)
+    public function runRemoteCommand(Task $task, Command $command, ArrayInput $commandInput, $hosts)
     {
         $running = array();
 
@@ -182,14 +226,8 @@ class TaskRunner
 
             $ssh = $host->getSshClient();
 
-            $outputter = function ($type, $buf) use ($host) {
-                $fmt = '   <fg=black;bg=blue;options=bold> ' . $host->getName() . ' </> %s';
-                if ($type === Process::ERR) {
-                    $fmt = '   <error> ' . $host->getName() . ' </error> %s';
-                }
-                foreach (explode("\n", $buf) as $line) {
-                    $this->writeln(sprintf($fmt, $line));
-                }
+            $outputter = function ($type, $buf) use ($task, $host) {
+                $this->taskOutput($task, $type, $buf, $host->getName());
             };
 
             

@@ -93,7 +93,8 @@ class YamlLoader
                         $target->addModule($module);
                     }
                 }
-                $this->loadTasks($targetNode, $target);
+                $this->loadTasks($targetNode, $target, 'tasks');
+                $this->loadTasks($targetNode, $target, 'triggers');
             }
         }
     }
@@ -269,13 +270,14 @@ class YamlLoader
         }
     }
     
-    public function loadTasks($data, $obj)
+    public function loadTasks($data, $obj, $type = 'tasks')
     {
-        if (!isset($data['tasks'])) {
+        if (!isset($data[$type])) {
             return;
         }
-        foreach ($data['tasks'] as $taskNode) {
+        foreach ($data[$type] as $taskNode) {
             $task = new Task();
+            $task->setType(rtrim($type, 's'));
             foreach ($taskNode as $key => $value) {
                 switch ($key) {
                     case 'name':
@@ -294,6 +296,10 @@ class YamlLoader
                         break;
                     case 'hosts':
                         $task->setHosts($taskNode[$key]);
+                        break;
+                    case 'trigger':
+                        // TODO: Support array of triggers
+                        $task->addTrigger($taskNode[$key]);
                         break;
                     default:
                         // Assume commandname

@@ -11,8 +11,29 @@ trait TaskTrait
         $this->tasks[] = $task;
     }
     
-    public function getTasks()
+    public function getAllTasks()
     {
         return $this->tasks;
+    }
+    
+    public function getTasksByType($type)
+    {
+        $res = [];
+        foreach ($this->tasks as $task) {
+            if ($task->getType() == $type) {
+                $res[] = $task;
+            }
+        }
+        return $res;
+    }
+    
+    public function getTaskByName($name)
+    {
+        foreach ($this->tasks as $task) {
+            if ($task->getName() == $name) {
+                return $task;
+            }
+        }
+        return null;
     }
 }

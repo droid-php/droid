@@ -45,8 +45,8 @@ class ConfigCommand extends Command
             foreach ($target->getModules() as $module) {
                 $output->writeln("    <comment> Module: <info>" . $module->getName() . "</info></comment>");
             }
-            foreach ($target->getTasks() as $task) {
-                $output->writeln("    <comment> Task: <info>" . $task->getName() . "</info> " . $task->getCommandName() . "</comment>");
+            foreach ($target->getAllTasks() as $task) {
+                $output->writeln("    <comment> " . ucfirst($task->getType()) . ": <info>" . $task->getName() . "</info> " . $task->getCommandName() . "</comment>");
                 $arguments = $task->getArguments();
                 if ($arguments) {
                     foreach ($arguments as $name => $value) {
