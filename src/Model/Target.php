@@ -5,7 +5,6 @@ namespace Droid\Model;
 class Target
 {
     private $name;
-    private $hosts;
     
     use VariableTrait;
     use TaskTrait;
@@ -21,6 +20,8 @@ class Target
         return $this->name;
     }
     
+    private $hosts;
+    
     public function getHosts()
     {
         return $this->hosts;
@@ -31,5 +32,4 @@ class Target
         $this->hosts = $hosts;
         return $this;
     }
-    
 }

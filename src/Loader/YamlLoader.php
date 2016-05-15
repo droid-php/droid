@@ -292,6 +292,9 @@ class YamlLoader
                             $task->setArgument($var, $val);
                         }
                         break;
+                    case 'hosts':
+                        $task->setHosts($taskNode[$key]);
+                        break;
                     default:
                         // Assume commandname
                         $task->setCommandName($key);

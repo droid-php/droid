@@ -75,4 +75,17 @@ class Task
         }
         return $this->items;
     }
+    
+    private $hosts;
+    
+    public function getHosts()
+    {
+        return $this->hosts;
+    }
+    
+    public function setHosts($hosts)
+    {
+        $this->hosts = $hosts;
+        return $this;
+    }
 }
