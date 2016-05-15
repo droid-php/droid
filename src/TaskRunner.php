@@ -203,8 +203,9 @@ class TaskRunner
         
         $process->start();
         $output = $this->output;
-        $process->wait(function ($type, $buf) use ($task, $output) {
-            $this->taskOutput($task, $type, $buf, 'localhost');
+        $runner = $this;
+        $process->wait(function ($type, $buf) use ($runner, $task, $output) {
+            $runner->taskOutput($task, $type, $buf, 'localhost');
         });
         
         return $process->getExitCode();
@@ -226,8 +227,9 @@ class TaskRunner
 
             $ssh = $host->getSshClient();
 
-            $outputter = function ($type, $buf) use ($task, $host) {
-                $this->taskOutput($task, $type, $buf, $host->getName());
+            $runner = $this;
+            $outputter = function ($type, $buf) use ($runner, $task, $host) {
+                $runner->taskOutput($task, $type, $buf, $host->getName());
             };
 
             
