@@ -32,12 +32,6 @@
             "Droid\\Test\\": "test/Droid/"
         }
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/boite/ssh-client"
-        }
-    ],
     "bin": ["bin/droid"],
     "license": "MIT"
 }
