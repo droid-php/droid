@@ -136,7 +136,8 @@ class YamlLoader
         $data = $this->loadYaml($filename);
         $module->setDescription($data['project']['description']);
         $this->loadVariables($data, $module);
-        $this->loadTasks($data, $module);
+        $this->loadTasks($data, $module, 'tasks');
+        $this->loadTasks($data, $module, 'triggers');
     }
     
     private function loadInventory(Inventory $inventory, $data)

@@ -90,38 +90,22 @@ class TaskRunner
             }
         }
     }
-
-    public function runTarget($project, $targetName)
+    
+    public function runTaskList($project, $list, $variables, $defaultHosts)
     {
-        $target = $project->getTargetByName($targetName);
-        if (!$target) {
-            throw new RuntimeException("Target not found: " . $targetName);
-        }
-
-        foreach ($target->getModules() as $module) {
-            $tasks = $module->getTasksByType('task');
-            foreach ($tasks as $task) {
-                $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
-                $hosts = $target->getHosts();
-                if ($task->getHosts()!='') {
-                    $hosts = $task->getHosts();
-                }
-                $this->runTask($task, $variables, $hosts);
-            }
-        }
-
-        $tasks = $target->getTasksByType('task');
+        // Build up '$triggers' array for all changed tasks
+        $triggers = [];
+        
+        $tasks = $list->getTasksByType('task');
+        
         foreach ($tasks as $task) {
-            $variables = array_merge($project->getVariables(), $target->getVariables());
-            $hosts = $target->getHosts();
-            if ($task->getHosts()) {
+            $hosts = $defaultHosts;
+            if ($task->getHosts()!='') {
                 $hosts = $task->getHosts();
             }
             $this->runTask($task, $variables, $hosts);
         }
-
-        // Build up '$triggers' array for all changed tasks
-        $triggers = [];
+        
         foreach ($tasks as $task) {
             if ($task->getChanged()) {
                 foreach ($task->getTriggers() as $name) {
@@ -129,20 +113,35 @@ class TaskRunner
                 }
             }
         }
-
+        
         // Call all triggered handlers
         foreach ($triggers as $name) {
-            $task = $target->getTaskByName($name);
+            $task = $list->getTaskByName($name);
             if (!$task) {
                 throw new RuntimeException("Unknown trigger: " . $name);
             }
-            $hosts = $target->getHosts();
+            $hosts = $defaultHosts;
             if ($task->getHosts()) {
                 $hosts = $task->getHosts();
             }
             $this->runTask($task, $variables, $hosts);
         }
+    }
 
+    public function runTarget($project, $targetName)
+    {
+        $target = $project->getTargetByName($targetName);
+        if (!$target) {
+            throw new RuntimeException("Target not found: " . $targetName);
+        }
+        
+        foreach ($target->getModules() as $module) {
+            $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
+            $this->runTaskList($project, $module, $variables, $target->getHosts());
+        }
+        
+        $variables = array_merge($project->getVariables(), $target->getVariables());
+        $this->runTaskList($project, $target, $variables, $target->getHosts());
         return 0;
     }
 
