@@ -6,6 +6,7 @@ use Droid\Test\AutoloaderAwareTestCase;
 
 use Droid\Application;
 use Droid\TaskRunner;
+use Droid\Model\Task;
 use Droid\Remote\AbleInterface;
 use Droid\Remote\EnablerInterface;
 use Droid\Remote\EnablementException;
@@ -23,6 +24,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
     private $enabler;
     private $output;
     private $input;
+    private $task;
     private $command;
     private $host;
     private $sshClient;
@@ -37,6 +39,10 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this->enabler = $this
             ->getMockBuilder(EnablerInterface::class)
             ->setConstructorArgs(array($this->synchroniser))
+            ->getMock()
+        ;
+        $this->task = $this
+            ->getMockBuilder(Task::class)
             ->getMock()
         ;
         $this->output = $this
@@ -91,7 +97,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
     }
 
     public function testRunRemoteCommandNeedsNotUploadDroid()
@@ -116,7 +122,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
     }
 
     public function testRunRemoteCommandNonZeroExitCode()
@@ -154,7 +160,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
     }
 
     public function testRunRemoteCommandGoodResult()
@@ -192,6 +198,6 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
     }
 }
