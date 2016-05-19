@@ -11,7 +11,7 @@ use Droid\Application;
  * executable to determine whether two versions differ. It uses SSH and Secure
  * Copy clients provided by the Host model.
  */
-class Synchroniser implements SynchroniserInterface
+class SynchroniserPhar implements SynchroniserInterface
 {
     protected $localDroidPath;
     protected $remoteDroidPath = '/tmp/';

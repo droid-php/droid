@@ -9,7 +9,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use RuntimeException;
 use Droid\Remote\Enabler;
-use Droid\Remote\Synchroniser;
+use Droid\Remote\SynchroniserPhar;
 use Droid\TaskRunner;
 
 class TargetRunCommand extends Command
@@ -57,7 +57,7 @@ class TargetRunCommand extends Command
             ));
         }
 
-        $enabler = new Enabler(new Synchroniser($localDroidBinary));
+        $enabler = new Enabler(new SynchroniserPhar($localDroidBinary));
         $project = $this->getApplication()->getProject();
         $runner = new TaskRunner($this->getApplication(), $output, $enabler);
 
