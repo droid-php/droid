@@ -14,7 +14,6 @@ use Droid\Application;
 class SynchroniserPhar implements SynchroniserInterface
 {
     protected $localDroidPath;
-    protected $remoteDroidPath = '/tmp/';
 
     /**
      * @param string $localDroidPath Path to the local droid binary file
@@ -39,6 +38,8 @@ class SynchroniserPhar implements SynchroniserInterface
         if (! $synchronised) {
             $this->uploadDroid($host, 300);
         }
+
+        $host->setDroidCommandPrefix('php droid.phar');
     }
 
     private function getDroidBinaryDigest()
@@ -60,9 +61,9 @@ class SynchroniserPhar implements SynchroniserInterface
             ->exec(array(sprintf(
                 'echo "%s %s" > %s.sha1 && sha1sum --status -c %s.sha1',
                 $digest,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME,
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME,
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME
             )))
         ;
         return $ssh->getExitCode() == 0;
@@ -73,7 +74,7 @@ class SynchroniserPhar implements SynchroniserInterface
         $scp = $host->getScpClient();
         $scp->copy(
             $this->localDroidPath,
-            $scp->getRemotePath($this->remoteDroidPath),
+            $scp->getRemotePath($host->getWorkingDirectory() . '/'),
             null,
             $timeout
         );

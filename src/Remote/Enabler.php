@@ -12,6 +12,7 @@ namespace Droid\Remote;
 class Enabler implements EnablerInterface
 {
     private $minPhpVersion = 50509;
+    protected $synchroniser;
 
     public function __construct(SynchroniserInterface $synchroniser)
     {

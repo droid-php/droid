@@ -65,6 +65,11 @@ class SynchroniserPharTest extends \PHPUnit_Framework_TestCase
 
         $this
             ->host
+            ->method('getWorkingDirectory')
+            ->willReturn('/tmp')
+        ;
+        $this
+            ->host
             ->expects($this->once())
             ->method('getSshClient')
             ->willReturn($this->sshClient)
@@ -111,6 +116,12 @@ class SynchroniserPharTest extends \PHPUnit_Framework_TestCase
             ->expects($this->once())
             ->method('getExitCode')
             ->willReturn(0) # copy succeeded
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('setDroidCommandPrefix')
+            ->with('php droid.phar')
         ;
 
         $synchroniser = new SynchroniserPhar($localDroidPath);
@@ -210,6 +221,12 @@ class SynchroniserPharTest extends \PHPUnit_Framework_TestCase
             ->host
             ->expects($this->never())
             ->method('getScpClient')
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('setDroidCommandPrefix')
+            ->with('php droid.phar')
         ;
 
         $synchroniser = new SynchroniserPhar($localDroidPath);
