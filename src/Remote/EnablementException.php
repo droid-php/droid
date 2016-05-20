@@ -11,7 +11,10 @@ use Droid\Model\Exception\HostException;
 class EnablementException extends HostException
 {
     public function __construct(
-        $host = null, $message = null, $code = null, $previous = null
+        $host = null,
+        $message = null,
+        $code = null,
+        $previous = null
     ) {
         $message = sprintf(
             'Unable to run remote commands: %s',

@@ -27,12 +27,14 @@ class SynchroniserPhar implements SynchroniserInterface
     {
         if (! $this->localDroidPath) {
             throw new SynchronisationException(
-                $host->getName(), 'Local droid is missing.'
+                $host->getName(),
+                'Local droid is missing.'
             );
         }
 
         $synchronised = $this->remoteDroidMatches(
-            $host, $this->getDroidBinaryDigest()
+            $host,
+            $this->getDroidBinaryDigest()
         );
 
         if (! $synchronised) {
