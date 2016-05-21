@@ -4,11 +4,11 @@ namespace Droid\Test\Remote;
 
 use Droid\Remote\AbleInterface;
 use Droid\Remote\SynchronisationException;
-use Droid\Remote\Synchroniser;
+use Droid\Remote\SynchroniserPhar;
 
 use SSHClient\Client\ClientInterface;
 
-class SynchroniserTest extends \PHPUnit_Framework_TestCase
+class SynchroniserPharTest extends \PHPUnit_Framework_TestCase
 {
     protected $host;
     protected $sshClient;
@@ -39,7 +39,7 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
      */
     public function testSyncFailsWhenLocalDroidMissing()
     {
-        $synchroniser = new Synchroniser;
+        $synchroniser = new SynchroniserPhar;
         $synchroniser->sync($this->host);
     }
 
@@ -49,7 +49,7 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
      */
     public function testSyncFailsWhenLocalDroidUnreadable()
     {
-        $synchroniser = new Synchroniser('/tmp/not-a-file');
+        $synchroniser = new SynchroniserPhar('/tmp/not-a-file');
         $synchroniser->sync($this->host);
     }
 
@@ -63,6 +63,11 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
 
         $digest = sha1_file($localDroidPath);
 
+        $this
+            ->host
+            ->method('getWorkingDirectory')
+            ->willReturn('/tmp')
+        ;
         $this
             ->host
             ->expects($this->once())
@@ -112,8 +117,14 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
             ->method('getExitCode')
             ->willReturn(0) # copy succeeded
         ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('setDroidCommandPrefix')
+            ->with('php droid.phar')
+        ;
 
-        $synchroniser = new Synchroniser($localDroidPath);
+        $synchroniser = new SynchroniserPhar($localDroidPath);
         $synchroniser->sync($this->host);
 
         return $localDroidPath;
@@ -181,7 +192,7 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
             ->willReturn('Copy failed - this is only a test!')
         ;
 
-        $synchroniser = new Synchroniser($localDroidPath);
+        $synchroniser = new SynchroniserPhar($localDroidPath);
         $synchroniser->sync($this->host);
     }
 
@@ -211,8 +222,14 @@ class SynchroniserTest extends \PHPUnit_Framework_TestCase
             ->expects($this->never())
             ->method('getScpClient')
         ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('setDroidCommandPrefix')
+            ->with('php droid.phar')
+        ;
 
-        $synchroniser = new Synchroniser($localDroidPath);
+        $synchroniser = new SynchroniserPhar($localDroidPath);
         $synchroniser->sync($this->host);
     }
 }

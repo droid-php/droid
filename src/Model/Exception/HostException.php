@@ -8,7 +8,10 @@ namespace Droid\Model\Exception;
 class HostException extends \RuntimeException
 {
     public function __construct(
-        $host = null, $message = null, $code = null, $previous = null
+        $host = null,
+        $message = null,
+        $code = null,
+        $previous = null
     ) {
         $message = sprintf(
             '[%s] %s',

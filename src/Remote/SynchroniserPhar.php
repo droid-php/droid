@@ -11,10 +11,9 @@ use Droid\Application;
  * executable to determine whether two versions differ. It uses SSH and Secure
  * Copy clients provided by the Host model.
  */
-class Synchroniser implements SynchroniserInterface
+class SynchroniserPhar implements SynchroniserInterface
 {
     protected $localDroidPath;
-    protected $remoteDroidPath = '/tmp/';
 
     /**
      * @param string $localDroidPath Path to the local droid binary file
@@ -28,17 +27,21 @@ class Synchroniser implements SynchroniserInterface
     {
         if (! $this->localDroidPath) {
             throw new SynchronisationException(
-                $host->getName(), 'Local droid is missing.'
+                $host->getName(),
+                'Local droid is missing.'
             );
         }
 
         $synchronised = $this->remoteDroidMatches(
-            $host, $this->getDroidBinaryDigest()
+            $host,
+            $this->getDroidBinaryDigest()
         );
 
         if (! $synchronised) {
             $this->uploadDroid($host, 300);
         }
+
+        $host->setDroidCommandPrefix('php droid.phar');
     }
 
     private function getDroidBinaryDigest()
@@ -60,9 +63,9 @@ class Synchroniser implements SynchroniserInterface
             ->exec(array(sprintf(
                 'echo "%s %s" > %s.sha1 && sha1sum --status -c %s.sha1',
                 $digest,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME,
-                $this->remoteDroidPath . Application::DROID_BIN_NAME
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME,
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME,
+                $host->getWorkingDirectory() . '/' . Application::DROID_BIN_NAME
             )))
         ;
         return $ssh->getExitCode() == 0;
@@ -73,7 +76,7 @@ class Synchroniser implements SynchroniserInterface
         $scp = $host->getScpClient();
         $scp->copy(
             $this->localDroidPath,
-            $scp->getRemotePath($this->remoteDroidPath),
+            $scp->getRemotePath($host->getWorkingDirectory() . '/'),
             null,
             $timeout
         );

@@ -12,6 +12,7 @@ namespace Droid\Remote;
 class Enabler implements EnablerInterface
 {
     private $minPhpVersion = 50509;
+    protected $synchroniser;
 
     public function __construct(SynchroniserInterface $synchroniser)
     {
@@ -28,7 +29,10 @@ class Enabler implements EnablerInterface
             $this->synchroniser->sync($host);
         } catch (SynchronisationException $e) {
             throw new EnablementException(
-                $host->getName(), 'Failure during binary synchronisation.', null, $e
+                $host->getName(),
+                'Failure during binary synchronisation.',
+                null,
+                $e
             );
         }
 
@@ -40,7 +44,8 @@ class Enabler implements EnablerInterface
         $ssh->exec(array('php', '-r', '"echo PHP_VERSION_ID;"'));
         if ($ssh->getExitCode()) {
             throw new EnablementException(
-                $hostname, 'Unable to check remote PHP version. Is PHP installed?'
+                $hostname,
+                'Unable to check remote PHP version. Is PHP installed?'
             );
         }
         $version = trim($ssh->getOutput());

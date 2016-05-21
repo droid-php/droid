@@ -28,7 +28,7 @@ class SshConfig extends ClientConfiguration
                 $opts['IdentitiesOnly'] = 'yes';
             }
             if ($this->host->getConnectionPort() && $this->host->getConnectionPort() != 22) {
-                $opts['Port'] = $this->host->getPort();
+                $opts['Port'] = $this->host->getConnectionPort();
             }
             if ($this->host->getSshGateway()) {
                 $opts['ProxyCommand'] = $this

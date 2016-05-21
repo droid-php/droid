@@ -47,4 +47,32 @@ interface AbleInterface
      * @return string
      */
     public function getName();
+
+    /**
+     * Set the path to the directory from where droid is remotely executed.
+     *
+     * @param string $path
+     */
+    public function setWorkingDirectory($path);
+
+    /**
+     * Get the path to the directory from where droid is remotely executed.
+     *
+     * @return string
+     */
+    public function getWorkingDirectory();
+
+    /**
+     * Set the command prefix for remotely executing Droid.
+     *
+     * @param string $prefix
+     */
+    public function setDroidCommandPrefix($prefix);
+
+    /**
+     * Get the command prefix for remotely executing Droid.
+     *
+     * @return string
+     */
+    public function getDroidCommandPrefix();
 }

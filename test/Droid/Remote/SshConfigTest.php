@@ -78,7 +78,7 @@ class SshConfigTest extends \PHPUnit_Framework_TestCase
     {
         $this
             ->host
-            ->method('getPort')
+            ->method('getConnectionPort')
             ->willReturn(10022)
         ;
 
@@ -158,7 +158,7 @@ class SshConfigTest extends \PHPUnit_Framework_TestCase
             ))
         ;
         $gw
-            ->method('getName')
+            ->method('getConnectionIp')
             ->willReturn('gateway_host')
         ;
         $gw

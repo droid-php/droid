@@ -233,8 +233,9 @@ class TaskRunner
 
             
             $cmd = array(
-                'php', '/tmp/droid.phar', $command->getName(),
-                (string)$commandInput, '--ansi'
+                sprintf('cd %s;', $host->getWorkingDirectory()),
+                $host->getDroidCommandPrefix(), $command->getName(),
+                (string) $commandInput, '--ansi'
             );
             
             if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {

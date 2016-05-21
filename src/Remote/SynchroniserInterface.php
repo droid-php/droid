@@ -8,8 +8,8 @@ namespace Droid\Remote;
 interface SynchroniserInterface
 {
     /**
-     * Upload the local droid executable when its content differs from that of
-     * the remote droid executable.
+     * Make available, on a remote host, the same version of a locally installed
+     * Droid.
      *
      * @param AbleInterface $host
      *
