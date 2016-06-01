@@ -74,7 +74,7 @@ class SynchroniserComposer implements SynchroniserInterface
         $ssh = $host->getSshClient();
         $ssh->exec(array(
             sprintf('cd %s;', $host->getWorkingDirectory()),
-            'php composer.phar install'
+            'php composer.phar install --no-dev'
         ));
         if ($ssh->getExitCode()) {
             throw new SynchronisationException($host->getName(), sprintf(
