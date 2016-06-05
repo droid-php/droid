@@ -248,7 +248,7 @@ class TaskRunner
 
             $ssh->startExec(
                 $cmd,
-                $outputter->bindTo($this->output)
+                $outputter
             );
             $running[] = array($host, $ssh);
         }
