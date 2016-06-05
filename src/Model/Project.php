@@ -10,7 +10,7 @@ class Project
     //private $tasks = [];
     private $targets = [];
     private $registeredCommands = [];
-    private $basePath;
+    private $configFilePath;
 
     use VariableTrait;
     use ModuleTrait;
@@ -20,12 +20,17 @@ class Project
         if (!file_exists($filename)) {
             throw new RuntimeException("Droid project file not found: " . $filename);
         }
-        $this->basePath = dirname($filename);
+        $this->configFilePath = $filename;
+    }
+
+    public function getConfigFilePath()
+    {
+        return $this->configFilePath;
     }
 
     public function getBasePath()
     {
-        return $this->basePath;
+        return dirname($this->configFilePath);
     }
 
     public function addRegisteredCommand(RegisteredCommand $registeredCommand)

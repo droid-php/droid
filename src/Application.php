@@ -19,10 +19,12 @@ class Application extends ConsoleApplication
     protected $inventory;
     protected $autoLoader;
     protected $droidConfig;
+    protected $basePath;
 
-    public function __construct($autoLoader)
+    public function __construct($autoLoader, $basePath = '')
     {
         $this->autoLoader = $autoLoader;
+        $this->basePath = $basePath;
         parent::__construct();
 
         $this->setName('Droid');
@@ -45,8 +47,7 @@ class Application extends ConsoleApplication
         if (file_exists($filename)) {
             $this->project = new Project($filename);
             $this->inventory = new Inventory();
-
-            $loader->load($this->project, $this->inventory, $filename);
+            $loader->load($this->project, $this->inventory, $this->basePath);
         } else {
             //exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
         }
@@ -163,5 +164,10 @@ class Application extends ConsoleApplication
     public function getAutoLoader()
     {
         return $this->autoLoader;
+    }
+
+    public function getBasePath()
+    {
+        return $this->basePath;
     }
 }

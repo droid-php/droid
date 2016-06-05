@@ -106,7 +106,7 @@ class TargetRunCommand extends Command
 
     protected function locateLocalComposerFiles()
     {
-        $candidatePath = getcwd();
+        $candidatePath = $this->getApplication()->getBasePath();
         $composerJson = $candidatePath . DIRECTORY_SEPARATOR . 'composer.json';
 
         if (!file_exists($composerJson)) {

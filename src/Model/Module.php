@@ -9,6 +9,7 @@ class Module
 {
     private $name;
     private $source;
+    private $basePath;
 
     use VariableTrait;
     use TaskTrait;
@@ -40,5 +41,15 @@ class Module
     {
         $this->description = $description;
         return $this;
+    }
+
+    public function setBasePath($path)
+    {
+        $this->basePath = $path;
+    }
+
+    public function getBasePath()
+    {
+        return $this->basePath;
     }
 }

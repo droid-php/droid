@@ -18,11 +18,18 @@ use RuntimeException;
 
 class YamlLoader
 {
-    public function load(Project $project, Inventory $inventory, $filename)
+    protected $appBasedir;
+    protected $modulePaths = array();
+    protected $ignoreModules = false;
+
+    public function load(Project $project, Inventory $inventory, $appBasePath)
     {
-        $this->modulePaths[] = 'modules';
-        $this->modulePaths[] = 'droid-vendor';
-        $data = $this->loadYaml($filename);
+        $this->appBasedir = $appBasePath . DIRECTORY_SEPARATOR;
+
+        $this->modulePaths[] = $this->appBasedir . 'modules';
+        $this->modulePaths[] = $this->appBasedir . 'droid-vendor';
+
+        $data = $this->loadYaml($project->getConfigFilePath());
         $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
     }
@@ -99,14 +106,11 @@ class YamlLoader
         }
     }
 
-    protected $ignoreModules = false;
-
     public function setIgnoreModules($flag)
     {
         $this->ignoreModules = $flag;
     }
 
-    protected $modulePaths = [];
     public function getModulePaths()
     {
         return $this->modulePaths;
@@ -134,6 +138,7 @@ class YamlLoader
         }
         $filename = $path . '/droid.yml';
         $data = $this->loadYaml($filename);
+        $module->setBasePath($path);
         $module->setDescription($data['project']['description']);
         $this->loadVariables($data, $module);
         $this->loadTasks($data, $module, 'tasks');
