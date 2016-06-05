@@ -11,10 +11,10 @@ class Project
     private $targets = [];
     private $registeredCommands = [];
     private $basePath;
-    
+
     use VariableTrait;
     use ModuleTrait;
-    
+
     public function __construct($filename)
     {
         if (!file_exists($filename)) {
@@ -22,32 +22,32 @@ class Project
         }
         $this->basePath = dirname($filename);
     }
-    
+
     public function getBasePath()
     {
         return $this->basePath;
     }
-    
+
     public function addRegisteredCommand(RegisteredCommand $registeredCommand)
     {
         $this->registeredCommands[] = $registeredCommand;
     }
-    
+
     public function getRegisteredCommands()
     {
         return $this->registeredCommands;
     }
-    
+
     public function addTarget(Target $target)
     {
         $this->targets[] = $target;
     }
-    
+
     public function getTargets()
     {
         return $this->targets;
     }
-    
+
     public function getTargetByName($targetName)
     {
         foreach ($this->targets as $target) {

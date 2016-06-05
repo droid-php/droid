@@ -31,7 +31,7 @@ class TaskRunner
         $this->output = $output;
         $this->enabler = $enabler;
     }
-    
+
     public function runTask(Task $task, $variables, $hosts)
     {
         $command = $this->app->find($task->getCommandName());
@@ -69,7 +69,7 @@ class TaskRunner
             } else {
                 $out .= "on <comment>local</comment>";
             }
-            
+
             $this->output->writeln($out);
 
             if ($hosts) {
@@ -90,14 +90,14 @@ class TaskRunner
             }
         }
     }
-    
+
     public function runTaskList($project, $list, $variables, $defaultHosts)
     {
         // Build up '$triggers' array for all changed tasks
         $triggers = [];
-        
+
         $tasks = $list->getTasksByType('task');
-        
+
         foreach ($tasks as $task) {
             $hosts = $defaultHosts;
             if ($task->getHosts()!='') {
@@ -105,7 +105,7 @@ class TaskRunner
             }
             $this->runTask($task, $variables, $hosts);
         }
-        
+
         foreach ($tasks as $task) {
             if ($task->getChanged()) {
                 foreach ($task->getTriggers() as $name) {
@@ -113,7 +113,7 @@ class TaskRunner
                 }
             }
         }
-        
+
         // Call all triggered handlers
         foreach ($triggers as $name) {
             $task = $list->getTaskByName($name);
@@ -134,12 +134,12 @@ class TaskRunner
         if (!$target) {
             throw new RuntimeException("Target not found: " . $targetName);
         }
-        
+
         foreach ($target->getModules() as $module) {
             $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
             $this->runTaskList($project, $module, $variables, $target->getHosts());
         }
-        
+
         $variables = array_merge($project->getVariables(), $target->getVariables());
         $this->runTaskList($project, $target, $variables, $target->getHosts());
         return 0;
@@ -162,24 +162,24 @@ class TaskRunner
         }
         return $out;
     }
-    
+
     public function taskOutput(Task $task, $type, $buf, $hostname)
     {
         $fmt = '<fg=black;bg=blue;options=reverse>' . $hostname . '</> %s';
         if ($type === Process::ERR) {
             $fmt = '<error>' . $hostname . '</error> %s';
         }
-        
+
         foreach (explode("\n", $buf) as $line) {
             if ($line!='') {
                 if (substr($line, 0, 14)=='[DROID-RESULT]') {
                     $json = substr($line, 15);
                     $data = json_decode($json, true);
-                    
+
                     if (isset($data['changed']) && ($data['changed']=='true')) {
                         $task->setChanged(true);
                     }
-                    
+
                     $this->output->writeln(sprintf($fmt, '<fg=cyan>' . $json . '</>'));
                 } else {
                     $this->output->writeln(sprintf($fmt, $line));
@@ -192,21 +192,21 @@ class TaskRunner
     {
         //$commandInput->setArgument('command', $command->getName());
         //$res = $command->run($commandInput, $this->output);
-        
+
         $argv = $_SERVER['argv'];
         $filename = $argv[0];
         $process = new Process($filename . ' ' . $command->getName() . ' ' . (string)$commandInput . ' --ansi');
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
             $this->output->writeLn("Full command-line: " . $process->getCommandLine());
         }
-        
+
         $process->start();
         $output = $this->output;
         $runner = $this;
         $process->wait(function ($type, $buf) use ($runner, $task, $output) {
             $runner->taskOutput($task, $type, $buf, 'localhost');
         });
-        
+
         return $process->getExitCode();
     }
 
@@ -231,13 +231,13 @@ class TaskRunner
                 $runner->taskOutput($task, $type, $buf, $host->getName());
             };
 
-            
+
             $cmd = array(
                 sprintf('cd %s;', $host->getWorkingDirectory()),
                 $host->getDroidCommandPrefix(), $command->getName(),
                 (string) $commandInput, '--ansi'
             );
-            
+
             if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
                 $this->output->writeLn(
                     "Full command-line on " .
@@ -307,7 +307,7 @@ class TaskRunner
             $php = LightnCandy::compile($value);
             $renderer = LightnCandy::prepare($php);
             $value = $renderer($variables);
-            
+
             if ($value) {
                 if (($value[0]=='@') || ($value[0]=='!')) {
                     $datafile = substr($value, 1);
