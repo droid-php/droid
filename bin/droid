@@ -3,17 +3,19 @@
 
 use Droid\Application;
 
-// Running as `bin/droid`
-$loader = __DIR__ . '/../vendor/autoload.php';
+$loader = null;
 
-if (!file_exists($loader)) {
-    // Running as .phar file
-    $loader = __DIR__ . '/../autoload.php';
+if (substr(__DIR__, -22) == 'vendor/droid/droid/bin') {
+    // running as a dependency of a project (beneath vendor)
+    $loader = __DIR__ . '/../../../autoload.php';
+} elseif (substr(__DIR__, -9) == 'droid/bin') {
+    // running as droid-php/droid/bin/droid (adjacent to vendor)
+    $loader = __DIR__ . '/../vendor/autoload.php';
 }
 
-if (!file_exists($loader)) {
-    // Running as `vendor/bin/droid`
-    $loader = __DIR__ . '/../../../autoload.php';
+if (!$loader || !file_exists($loader)) {
+    // Running as .phar file
+    $loader = __DIR__ . '/../autoload.php';
 }
 
 if (!file_exists($loader)) {
