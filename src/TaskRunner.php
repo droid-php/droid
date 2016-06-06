@@ -137,6 +137,7 @@ class TaskRunner
 
         foreach ($target->getModules() as $module) {
             $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
+            $variables['mod_path'] = $module->getBasePath();
             $this->runTaskList($project, $module, $variables, $target->getHosts());
         }
 
