@@ -14,6 +14,8 @@ use Droid\Application;
  */
 class SynchroniserComposer implements SynchroniserInterface
 {
+    const TIMEOUT_MAX_RUNTIME_COMPOSER_INSTALL = 180;
+
     protected $composerPath;
 
     /**
@@ -72,10 +74,14 @@ class SynchroniserComposer implements SynchroniserInterface
             $this->installComposer($host);
         }
         $ssh = $host->getSshClient();
-        $ssh->exec(array(
-            sprintf('cd %s;', $host->getWorkingDirectory()),
-            'php composer.phar install --no-dev'
-        ));
+        $ssh->exec(
+            array(
+                sprintf('cd %s;', $host->getWorkingDirectory()),
+                'php composer.phar install --no-dev'
+            ),
+            null,
+            self::TIMEOUT_MAX_RUNTIME_COMPOSER_INSTALL
+        );
         if ($ssh->getExitCode()) {
             throw new SynchronisationException($host->getName(), sprintf(
                 'Unable to execute composer install: "%s".',

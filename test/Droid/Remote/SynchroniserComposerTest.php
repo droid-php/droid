@@ -243,7 +243,11 @@ class SynchroniserComposerTest extends \PHPUnit_Framework_TestCase
                     'php composer-setup.php;',
                     'rm composer-setup.php'
                 )),
-                array(array('cd ~/working-dir;', 'php composer.phar install --no-dev'))
+                array(
+                    array('cd ~/working-dir;', 'php composer.phar install --no-dev'),
+                    null,
+                    SynchroniserComposer::TIMEOUT_MAX_RUNTIME_COMPOSER_INSTALL
+                )
             )
         ;
         $this
@@ -305,7 +309,11 @@ class SynchroniserComposerTest extends \PHPUnit_Framework_TestCase
                     'php composer-setup.php;',
                     'rm composer-setup.php'
                 )),
-                array(array('cd ~/working-dir;', 'php composer.phar install --no-dev'))
+                array(
+                    array('cd ~/working-dir;', 'php composer.phar install --no-dev'),
+                    null,
+                    SynchroniserComposer::TIMEOUT_MAX_RUNTIME_COMPOSER_INSTALL
+                )
             )
         ;
         $this
@@ -367,7 +375,11 @@ class SynchroniserComposerTest extends \PHPUnit_Framework_TestCase
             ->method('exec')
             ->withConsecutive(
                 array(array('cd ~/working-dir;', 'stat composer.phar')),
-                array(array('cd ~/working-dir;', 'php composer.phar install --no-dev'))
+                array(
+                    array('cd ~/working-dir;', 'php composer.phar install --no-dev'),
+                    null,
+                    SynchroniserComposer::TIMEOUT_MAX_RUNTIME_COMPOSER_INSTALL
+                )
             )
         ;
         $this
