@@ -334,10 +334,14 @@ class TaskRunner
             $name = $argument->getName();
             if (isset($arguments[$name])) {
                 $inputs[$name] = $arguments[$name];
-            } else {
-                if ($argument->isRequired()) {
-                    throw new RuntimeException("Missing required argument: " . $name);
-                }
+            } elseif ($argument->isRequired()) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Missing required argument "%s" for command "%s".',
+                        $name,
+                        $command->getName()
+                    )
+                );
             }
         }
 
