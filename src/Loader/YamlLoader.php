@@ -2,19 +2,20 @@
 
 namespace Droid\Loader;
 
-use Symfony\Component\Yaml\Parser as YamlParser;
-use Droid\Model\Project;
-use Droid\Model\Target;
-use Droid\Model\Inventory;
-use Droid\Model\Host;
-use Droid\Model\HostGroup;
-use Droid\Model\RegisteredCommand;
-use Droid\Model\Task;
-use Droid\Model\Firewall;
-use Droid\Model\Rule;
-use Droid\Model\Module;
-use Droid\Utils;
 use RuntimeException;
+
+use Droid\Model\Feature\Firewall\Rule;
+use Droid\Model\Inventory\Host;
+use Droid\Model\Inventory\HostGroup;
+use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Module;
+use Droid\Model\Project\Project;
+use Droid\Model\Project\RegisteredCommand;
+use Droid\Model\Project\Target;
+use Droid\Model\Project\Task;
+use Symfony\Component\Yaml\Parser as YamlParser;
+
+use Droid\Utils;
 
 class YamlLoader
 {

@@ -1,22 +1,20 @@
 <?php
 
-namespace Droid\Test;
+namespace Droid\Test\TaskRunner;
 
-use Droid\Test\AutoloaderAwareTestCase;
-
-use Droid\Application;
-use Droid\TaskRunner;
-use Droid\Model\Task;
-use Droid\Remote\AbleInterface;
-use Droid\Remote\EnablerInterface;
-use Droid\Remote\EnablementException;
-use Droid\Remote\SynchroniserInterface;
-
+use Droid\Model\Inventory\Remote\AbleInterface;
+use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\EnablementException;
+use Droid\Model\Inventory\Remote\SynchroniserInterface;
+use Droid\Model\Project\Task;
 use SSHClient\Client\ClientInterface;
-
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use Droid\Application;
+use Droid\TaskRunner;
+use Droid\Test\AutoloaderAwareTestCase;
 
 class RunRemoteCommandTest extends AutoloaderAwareTestCase
 {

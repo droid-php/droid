@@ -2,14 +2,14 @@
 
 namespace Droid;
 
-use Symfony\Component\Console\Application as ConsoleApplication;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\ArgvInput;
-use Droid\Model\Project;
-use Droid\Model\Inventory;
-use Droid\Loader\YamlLoader;
 use RuntimeException;
+
+use Symfony\Component\Console\Application as ConsoleApplication;
+use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Project;
+
+use Droid\Command\TargetRunCommand;
+use Droid\Loader\YamlLoader;
 
 class Application extends ConsoleApplication
 {
@@ -127,7 +127,7 @@ class Application extends ConsoleApplication
 
         if ($this->hasProject()) {
             foreach ($this->getProject()->getTargets() as $target) {
-                $command = new \Droid\Command\TargetRunCommand();
+                $command = new TargetRunCommand;
                 $command->setName($target->getName());
                 $command->setDescription("Run target: " . $target->getName());
                 $command->setTarget($target->getName());

@@ -4,17 +4,14 @@ namespace Droid;
 
 use RuntimeException;
 
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Application as App;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Process\ProcessBuilder;
-use Droid\Model\Task;
-use Droid\Remote\EnablementException;
-use Droid\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\EnablementException;
+use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Project\Task;
 use LightnCandy\LightnCandy;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Process\Process;
 
 class TaskRunner
 {
@@ -23,7 +20,7 @@ class TaskRunner
     private $connections = [];
 
     public function __construct(
-        App $app,
+        Application $app,
         OutputInterface $output,
         EnablerInterface $enabler
     ) {
