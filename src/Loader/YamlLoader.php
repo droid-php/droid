@@ -158,21 +158,33 @@ class YamlLoader
 
     private function loadRules($obj, $data)
     {
-        if (isset($data['inbound'])) {
-            foreach ($data['inbound'] as $ruleData) {
-                $rule = new Rule();
-                $rule->setAddress($ruleData['address']);
-                $rule->setPort($ruleData['port']);
-
-                if (isset($ruleData['action'])) {
-                    $rule->setAction($ruleData['action']);
-                }
-                if (isset($ruleData['direction'])) {
-                    $rule->setAction($ruleData['direction']);
-                }
-                $rule->setDirection('inbound');
-                $obj->addRule($rule);
+        if (! isset($data['firewall_rules'])) {
+            return;
+        }
+        foreach ($data['firewall_rules'] as $ruleData) {
+            if (!isset($ruleData['address']) || !isset($ruleData['port'])) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'A Firewall rule for "%s" cannot be loaded because it does not define both address and port.',
+                        $obj->getName()
+                    )
+                );
             }
+            $rule = new Rule();
+            $rule
+                ->setAddress($ruleData['address'])
+                ->setPort($ruleData['port'])
+            ;
+            if (isset($ruleData['protocol'])) {
+                $rule->setProtocol($ruleData['protocol']);
+            }
+            if (isset($ruleData['direction'])) {
+                $rule->setDirection($ruleData['direction']);
+            }
+            if (isset($ruleData['action'])) {
+                $rule->setAction($ruleData['action']);
+            }
+            $obj->addRule($rule);
         }
     }
 
