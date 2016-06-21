@@ -3,14 +3,13 @@
 namespace Droid\Command;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use RuntimeException;
-use Droid\Remote\Enabler;
-use Droid\Remote\SynchroniserComposer;
-use Droid\Remote\SynchroniserPhar;
+use Droid\Model\Inventory\Remote\Enabler;
+use Droid\Model\Inventory\Remote\SynchroniserComposer;
+use Droid\Model\Inventory\Remote\SynchroniserPhar;
 use Droid\TaskRunner;
 
 class TargetRunCommand extends Command
@@ -106,7 +105,7 @@ class TargetRunCommand extends Command
 
     protected function locateLocalComposerFiles()
     {
-        $candidatePath = getcwd();
+        $candidatePath = $this->getApplication()->getBasePath();
         $composerJson = $candidatePath . DIRECTORY_SEPARATOR . 'composer.json';
 
         if (!file_exists($composerJson)) {

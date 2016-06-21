@@ -2,14 +2,14 @@
 
 namespace Droid;
 
-use Symfony\Component\Console\Application as ConsoleApplication;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\ArgvInput;
-use Droid\Model\Project;
-use Droid\Model\Inventory;
-use Droid\Loader\YamlLoader;
 use RuntimeException;
+
+use Symfony\Component\Console\Application as ConsoleApplication;
+use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Project;
+
+use Droid\Command\TargetRunCommand;
+use Droid\Loader\YamlLoader;
 
 class Application extends ConsoleApplication
 {
@@ -19,16 +19,18 @@ class Application extends ConsoleApplication
     protected $inventory;
     protected $autoLoader;
     protected $droidConfig;
-    
-    public function __construct($autoLoader)
+    protected $basePath;
+
+    public function __construct($autoLoader, $basePath = '')
     {
         $this->autoLoader = $autoLoader;
+        $this->basePath = $basePath;
         parent::__construct();
 
         $this->setName('Droid');
         $this->setVersion('1.0.0');
         $loader = new YamlLoader();
-        
+
         // extract --droid-config argument, before interpreting other arguments
         foreach ($_SERVER['argv'] as $i => $argument) {
             if (substr($argument, 0, 15)=='--droid-config=') {
@@ -45,15 +47,14 @@ class Application extends ConsoleApplication
         if (file_exists($filename)) {
             $this->project = new Project($filename);
             $this->inventory = new Inventory();
-            
-            $loader->load($this->project, $this->inventory, $filename);
+            $loader->load($this->project, $this->inventory, $this->basePath);
         } else {
             //exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
         }
         $this->registerCustomCommands();
 
     }
-    
+
     public function getProject()
     {
         if (!$this->hasProject()) {
@@ -61,12 +62,12 @@ class Application extends ConsoleApplication
         }
         return $this->project;
     }
-    
+
     public function hasProject()
     {
         return isset($this->project);
     }
-    
+
     public function getInventory()
     {
         if (!$this->hasInventory()) {
@@ -74,12 +75,12 @@ class Application extends ConsoleApplication
         }
         return $this->inventory;
     }
-    
+
     public function hasInventory()
     {
         return isset($this->inventory);
     }
-    
+
     /**
      * Gets the default commands that should always be available.
      *
@@ -102,11 +103,11 @@ class Application extends ConsoleApplication
                 $this->add($command);
             }
         }
-            
+
         // Automatically register commands by scanning namespaces for a 'DroidPlugin' class.
         //print_r($this->autoLoader);
         $prefixes = $this->autoLoader->getPrefixesPsr4();
-        
+
         foreach ($prefixes as $namespace => $paths) {
             $className = $namespace . 'DroidPlugin';
             if (class_exists($className)) {
@@ -117,27 +118,27 @@ class Application extends ConsoleApplication
                 }
             }
         }
-        
+
         foreach ($this->all() as $command) {
             if (method_exists($command, 'setInventory')) {
                 $command->setInventory($this->inventory);
             }
         }
-        
+
         if ($this->hasProject()) {
             foreach ($this->getProject()->getTargets() as $target) {
-                $command = new \Droid\Command\TargetRunCommand();
+                $command = new TargetRunCommand;
                 $command->setName($target->getName());
                 $command->setDescription("Run target: " . $target->getName());
                 $command->setTarget($target->getName());
                 $this->add($command);
-                
+
                 //print_r($target);
             }
         }
         //exit();
     }
-    
+
     private function getDroidFilename()
     {
         if ($this->droidConfig) {
@@ -159,9 +160,14 @@ class Application extends ConsoleApplication
         $this->autoLoader = $autoLoader;
         return $this;
     }
-    
+
     public function getAutoLoader()
     {
         return $this->autoLoader;
+    }
+
+    public function getBasePath()
+    {
+        return $this->basePath;
     }
 }

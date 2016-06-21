@@ -3,17 +3,23 @@
 
 use Droid\Application;
 
-// Running as `bin/droid`
-$loader = __DIR__ . '/../vendor/autoload.php';
+$loader = null;
+$projectDir = null;
 
-if (!file_exists($loader)) {
-    // Running as .phar file
-    $loader = __DIR__ . '/../autoload.php';
+if (substr(__DIR__, -22) == 'vendor/droid/droid/bin') {
+    // running as a dependency of a project (beneath vendor)
+    $loader = __DIR__ . '/../../../autoload.php';
+    $projectDir = __DIR__ . '/../../../..';
+} elseif (substr(__DIR__, -9) == 'droid/bin') {
+    // running as droid-php/droid/bin/droid (adjacent to vendor)
+    $loader = __DIR__ . '/../vendor/autoload.php';
+    $projectDir = __DIR__ . '/..';
 }
 
-if (!file_exists($loader)) {
-    // Running as `vendor/bin/droid`
-    $loader = __DIR__ . '/../../../autoload.php';
+if (!$loader || !file_exists($loader)) {
+    // Running as .phar file
+    $loader = __DIR__ . '/../autoload.php';
+    $projectDir = getcwd();
 }
 
 if (!file_exists($loader)) {
@@ -30,5 +36,5 @@ if (class_exists('AutoTune\Tuner')) {
     \AutoTune\Tuner::init($autoLoader);
 }
 
-$application = new Application($autoLoader);
+$application = new Application($autoLoader, realpath($projectDir));
 $application->run();

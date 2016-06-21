@@ -2,38 +2,46 @@
 
 namespace Droid\Loader;
 
-use Symfony\Component\Yaml\Parser as YamlParser;
-use Droid\Model\Project;
-use Droid\Model\Target;
-use Droid\Model\Inventory;
-use Droid\Model\Host;
-use Droid\Model\HostGroup;
-use Droid\Model\RegisteredCommand;
-use Droid\Model\Task;
-use Droid\Model\Firewall;
-use Droid\Model\Rule;
-use Droid\Model\Module;
-use Droid\Utils;
 use RuntimeException;
+
+use Droid\Model\Feature\Firewall\Rule;
+use Droid\Model\Inventory\Host;
+use Droid\Model\Inventory\HostGroup;
+use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Module;
+use Droid\Model\Project\Project;
+use Droid\Model\Project\RegisteredCommand;
+use Droid\Model\Project\Target;
+use Droid\Model\Project\Task;
+use Symfony\Component\Yaml\Parser as YamlParser;
+
+use Droid\Utils;
 
 class YamlLoader
 {
-    public function load(Project $project, Inventory $inventory, $filename)
+    protected $appBasedir;
+    protected $modulePaths = array();
+    protected $ignoreModules = false;
+
+    public function load(Project $project, Inventory $inventory, $appBasePath)
     {
-        $this->modulePaths[] = 'modules';
-        $this->modulePaths[] = 'droid-vendor';
-        $data = $this->loadYaml($filename);
+        $this->appBasedir = $appBasePath . DIRECTORY_SEPARATOR;
+
+        $this->modulePaths[] = $this->appBasedir . 'modules';
+        $this->modulePaths[] = $this->appBasedir . 'droid-vendor';
+
+        $data = $this->loadYaml($project->getConfigFilePath());
         $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
     }
-    
+
     public function loadYaml($filename)
     {
 
         if (!file_exists($filename)) {
             throw new RuntimeException("File not found: $filename");
         }
-        
+
         $parser = new YamlParser();
         $data = $parser->parse(file_get_contents($filename));
         if (isset($data['include'])) {
@@ -54,7 +62,7 @@ class YamlLoader
         return $data;
 
     }
-    
+
     private function loadProject(Project $project, $data)
     {
         $this->loadVariables($data, $project);
@@ -67,7 +75,7 @@ class YamlLoader
                 }
             }
         }
-        
+
         if (isset($data['modules'])) {
             foreach ($data['modules'] as $name => $source) {
                 $module = new Module($name, $source);
@@ -76,17 +84,17 @@ class YamlLoader
             }
         }
 
-        
+
         if (isset($data['targets'])) {
             foreach ($data['targets'] as $targetName => $targetNode) {
                 $target = new Target($targetName);
                 $this->loadVariables($targetNode, $target);
-                
+
                 $project->addTarget($target);
                 if (isset($targetNode['hosts'])) {
                     $target->setHosts($targetNode['hosts']);
                 }
-                
+
                 if (isset($targetNode['modules'])) {
                     foreach ($targetNode['modules'] as $moduleName) {
                         $module = $project->getModule($moduleName);
@@ -98,20 +106,17 @@ class YamlLoader
             }
         }
     }
-    
-    protected $ignoreModules = false;
-    
+
     public function setIgnoreModules($flag)
     {
         $this->ignoreModules = $flag;
     }
-    
-    protected $modulePaths = [];
+
     public function getModulePaths()
     {
         return $this->modulePaths;
     }
-    
+
     public function getModulePath(Module $module)
     {
         foreach ($this->getModulePaths() as $path) {
@@ -125,7 +130,7 @@ class YamlLoader
         }
         throw new RuntimeException("Module path not found for: " . $module->getName());
     }
-    
+
     public function loadModule(Module $module)
     {
         $path = $this->getModulePath($module);
@@ -134,12 +139,13 @@ class YamlLoader
         }
         $filename = $path . '/droid.yml';
         $data = $this->loadYaml($filename);
+        $module->setBasePath($path);
         $module->setDescription($data['project']['description']);
         $this->loadVariables($data, $module);
         $this->loadTasks($data, $module, 'tasks');
         $this->loadTasks($data, $module, 'triggers');
     }
-    
+
     private function loadInventory(Inventory $inventory, $data)
     {
         if (isset($data['hosts'])) {
@@ -149,7 +155,7 @@ class YamlLoader
             $this->loadHostGroups($inventory, $data['groups']);
         }
     }
-    
+
     private function loadRules($obj, $data)
     {
         if (isset($data['inbound'])) {
@@ -157,7 +163,7 @@ class YamlLoader
                 $rule = new Rule();
                 $rule->setAddress($ruleData['address']);
                 $rule->setPort($ruleData['port']);
-                
+
                 if (isset($ruleData['action'])) {
                     $rule->setAction($ruleData['action']);
                 }
@@ -261,7 +267,7 @@ class YamlLoader
             $inventory->addHostGroup($group);
         }
     }
-    
+
     public function loadVariables($data, $obj)
     {
         if (isset($data['variables'])) {
@@ -270,7 +276,7 @@ class YamlLoader
             }
         }
     }
-    
+
     public function loadTasks($data, $obj, $type = 'tasks')
     {
         if (!isset($data[$type])) {
