@@ -240,7 +240,7 @@ class YamlLoader
                         }
                         $host->setSshGateway($inventory->getHost($value));
                         break;
-                    case 'inbound':
+                    case 'firewall_rules':
                         break;
                     default:
                         throw new RuntimeException("Unknown host property: " . $key);
