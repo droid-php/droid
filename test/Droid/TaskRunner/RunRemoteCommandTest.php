@@ -3,8 +3,8 @@
 namespace Droid\Test\TaskRunner;
 
 use Droid\Model\Inventory\Remote\AbleInterface;
-use Droid\Model\Inventory\Remote\EnablerInterface;
 use Droid\Model\Inventory\Remote\EnablementException;
+use Droid\Model\Inventory\Remote\EnablerInterface;
 use Droid\Model\Inventory\Remote\SynchroniserInterface;
 use Droid\Model\Project\Task;
 use SSHClient\Client\ClientInterface;
@@ -67,6 +67,56 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->disableOriginalConstructor()
             ->getMock()
         ;
+
+        $this
+            ->host
+            ->method('getName')
+            ->willReturn('host.example.com')
+        ;
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Expected an ArrayInput for host "host.example.com".
+     */
+    public function testRunRemoteCommandFailsWhenPerHostCommandInputIsMissing()
+    {
+        $this
+            ->host
+            ->expects($this->never())
+            ->method('enabled')
+        ;
+
+        $app = new Application($this->autoloader);
+        $runner = new TaskRunner($app, $this->output, $this->enabler);
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array(),
+            array($this->host)
+        );
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Expected an ArrayInput for host "host.example.com".
+     */
+    public function testRunRemoteCommandFailsWhenPerHostCommandInputIsTheWrongTrousers()
+    {
+        $this
+            ->host
+            ->expects($this->never())
+            ->method('enabled')
+        ;
+
+        $app = new Application($this->autoloader);
+        $runner = new TaskRunner($app, $this->output, $this->enabler);
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => 'Hang in there Grommit, everything\'s under control'),
+            array($this->host)
+        );
     }
 
     /**
@@ -95,7 +145,12 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => $this->input),
+            array($this->host)
+        );
     }
 
     public function testRunRemoteCommandNeedsNotUploadDroid()
@@ -120,7 +175,12 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => $this->input),
+            array($this->host)
+        );
     }
 
     public function testRunRemoteCommandNonZeroExitCode()
@@ -158,7 +218,12 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => $this->input),
+            array($this->host)
+        );
     }
 
     public function testRunRemoteCommandGoodResult()
@@ -196,6 +261,11 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
 
         $app = new Application($this->autoloader);
         $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand($this->task, $this->command, $this->input, array($this->host));
+        $runner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => $this->input),
+            array($this->host)
+        );
     }
 }

@@ -204,16 +204,16 @@ class YamlLoader
                         $this->loadVariables($hostData, $host);
                         break;
                     case 'public_ip':
-                        $host->setPublicIp($value);
+                        $host->public_ip = $value;
                         break;
                     case 'private_ip':
-                        $host->setPrivateIp($value);
+                        $host->private_ip = $value;
                         break;
                     case 'public_port':
-                        $host->setPublicPort($value);
+                        $host->public_port = $value;
                         break;
                     case 'private_port':
-                        $host->setPrivatePort($value);
+                        $host->private_port = $value;
                         break;
                     case 'username':
                         $host->setUsername($value);
@@ -315,6 +315,9 @@ class YamlLoader
                         break;
                     case 'hosts':
                         $task->setHosts($taskNode[$key]);
+                        break;
+                    case 'host_filter':
+                        $task->setHostFilter($taskNode[$key]);
                         break;
                     case 'trigger':
                         // TODO: Support array of triggers
