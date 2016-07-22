@@ -5,6 +5,10 @@ namespace Droid;
 use RuntimeException;
 
 use Symfony\Component\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 use Droid\Model\Inventory\Inventory;
 use Droid\Model\Project\Project;
 
@@ -20,6 +24,7 @@ class Application extends ConsoleApplication
     protected $autoLoader;
     protected $droidConfig;
     protected $basePath;
+    protected $loaderErrors;
 
     public function __construct($autoLoader, $basePath = '')
     {
@@ -42,17 +47,55 @@ class Application extends ConsoleApplication
             }
         }
 
-        // Load droid.yml
         $filename = $this->getDroidFilename();
-        if (file_exists($filename)) {
-            $this->project = new Project($filename);
-            $this->inventory = new Inventory();
-            $loader->load($this->project, $this->inventory, $this->basePath);
-        } else {
-            //exit("ERROR: Droid configuration not found in " . $filename . "\nSOLUTION: Create a droid.yml file, or use --droid-config= to specify which droid.yml you'd like to use.\n");
-        }
-        $this->registerCustomCommands();
 
+        if (! file_exists($filename)) {
+            $this->registerCustomCommands();
+            return;
+        }
+
+        $this->project = new Project($filename);
+        $this->inventory = new Inventory();
+
+        // Load droid.yml
+        $loader->load($this->project, $this->inventory, $this->basePath);
+
+        $this->loaderErrors = $loader->errors;
+        if ($this->loaderErrors) {
+            return;
+        }
+
+        $this->registerCustomCommands();
+    }
+
+    public function run(InputInterface $input = null, OutputInterface $output = null)
+    {
+        if ($input === null) {
+            $input = new ArgvInput;
+        }
+
+        if ($output === null) {
+            $output = new ConsoleOutput;
+        }
+
+        if ($this->loaderErrors) {
+            $messages = $this->formatErrorMessages($this->loaderErrors);
+            array_push($messages, '<comment>Stop.</comment>');
+            $output->write($messages, true);
+            exit(1);
+        }
+
+        return parent::run($input, $output);
+    }
+
+    protected function formatErrorMessages($messages)
+    {
+        return array_map(
+            function ($x) {
+                return sprintf('<error>Error</error> %s', $x);
+            },
+            $messages
+        );
     }
 
     public function getProject()

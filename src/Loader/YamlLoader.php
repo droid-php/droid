@@ -13,12 +13,15 @@ use Droid\Model\Project\Project;
 use Droid\Model\Project\RegisteredCommand;
 use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Parser as YamlParser;
 
 use Droid\Utils;
 
 class YamlLoader
 {
+    public $errors = array();
+
     protected $appBasedir;
     protected $modulePaths = array();
     protected $ignoreModules = false;
@@ -39,20 +42,52 @@ class YamlLoader
     {
 
         if (!file_exists($filename)) {
-            throw new RuntimeException("File not found: $filename");
+            $this->errors[] = sprintf(
+                'Failed to load yaml file "%s": File not found.',
+                $filename
+            );
+            return array();
         }
 
         $parser = new YamlParser();
-        $data = $parser->parse(file_get_contents($filename));
+        $data = null;
+        try {
+            $data = $parser->parse(file_get_contents($filename));
+            if (! is_array($data)) {
+                $this->errors[] = sprintf(
+                    'Failed to get any yaml content from file "%s".',
+                    $filename
+                );
+                return array();
+            }
+        } catch (ParseException $e) {
+            $this->errors[] = sprintf(
+                'Failed to parse yaml content from file "%s": %s',
+                $filename,
+                $e->getMessage()
+            );
+            return array();
+        }
         if (isset($data['include'])) {
             foreach ($data['include'] as $line) {
                 $filenames = glob($line);
                 if (count($filenames)==0) {
-                    throw new RuntimeException("Include(s) not found: " . $line);
+                    $this->errors[] = sprintf(
+                        'Failed to include any files after processing Include directive "%s".',
+                        $line
+                    );
+                    continue;
                 }
                 foreach ($filenames as $filename) {
-                    if (!file_exists($filename)) {
-                        throw new RuntimeException("Include filename does not exist: " . $filename);
+                    if (! is_file($filename)) {
+                        continue;
+                    }
+                    if (! is_readable($filename)) {
+                        $this->errors[] = sprintf(
+                            'Failed to include "%s". File is not readable.',
+                            $filename
+                        );
+                        continue;
                     }
                     $includeData = $this->loadYaml($filename);
                     $data = array_merge_recursive($data, $includeData);
