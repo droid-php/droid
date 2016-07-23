@@ -160,10 +160,12 @@ class YamlLoader
                 return $modulePath;
             }
         }
-        if ($this->ignoreModules) {
-            return;
+        if (! $this->ignoreModules) {
+            $this->errors[] = sprintf(
+                'The module "%s" could not be found. Try running droid module:install.',
+                $module->getName()
+            );
         }
-        throw new RuntimeException("Module path not found for: " . $module->getName());
     }
 
     public function loadModule(Module $module)
