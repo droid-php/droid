@@ -295,6 +295,25 @@ class YamlLoader
                 ->setSshGateway($inventory->getHost($gateway))
             ;
         }
+
+        # sanity check of hosts
+        $inventoryHosts = $inventory->getHosts();
+        if (empty($inventoryHosts)) {
+            $this->errors[] = 'Inventory is devoid of Hosts.';
+            return;
+        }
+        $incompleteHosts = array();
+        foreach ($inventoryHosts as $host) {
+            if (! $host->getConnectionIp()) {
+                $incompleteHosts[] = $host->name;
+            }
+        }
+        if ($incompleteHosts) {
+            $this->errors[] = sprintf(
+                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (public_ip): %s.',
+                implode(', ', $incompleteHosts)
+            );
+        }
     }
 
     private function loadHostGroups(Inventory $inventory, $groups)
