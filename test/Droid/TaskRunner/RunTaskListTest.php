@@ -14,6 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Droid\Application;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
+use Droid\Transform\Transformer;
 
 class RunTaskListTest extends AutoloaderAwareTestCase
 {
@@ -25,6 +26,7 @@ class RunTaskListTest extends AutoloaderAwareTestCase
     private $target;
     private $task;
     private $taskRunner;
+    private $transformer;
 
     public function setUp()
     {
@@ -61,9 +63,16 @@ class RunTaskListTest extends AutoloaderAwareTestCase
             ->getMockBuilder(Task::class)
             ->getMock()
         ;
+        $this->transformer = $this
+            ->getMockBuilder(Transformer::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+        ;
         $this->taskRunner = $this
             ->getMockBuilder(TaskRunner::class)
-            ->setConstructorArgs(array($this->app, $this->output, $this->enabler))
+            ->setConstructorArgs(
+                array($this->app, $this->output, $this->enabler, $this->transformer)
+            )
             ->setMethods(array('runTaskRemotely', 'runTaskLocally'))
             ->getMock()
         ;

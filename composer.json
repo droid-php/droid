@@ -21,6 +21,7 @@
         "zordius/lightncandy": "~0.93"
     },
     "require-dev": {
+        "mikey179/vfsStream": "^1.6",
         "phpunit/phpunit": "^4.8",
         "linkorb/autotune": "~1.0"
     },

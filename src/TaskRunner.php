@@ -9,7 +9,6 @@ use UnexpectedValueException;
 use Droid\Model\Inventory\Remote\EnablementException;
 use Droid\Model\Inventory\Remote\EnablerInterface;
 use Droid\Model\Project\Task;
-use LightnCandy\LightnCandy;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -17,22 +16,27 @@ use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\ExpressionLanguage\SyntaxError;
 use Symfony\Component\Process\Process;
 
+use Droid\Transform\Transformer;
+
 class TaskRunner
 {
     private $output;
     private $app;
     private $connections = [];
     private $expr;
+    private $transformer;
 
     public function __construct(
         Application $app,
         OutputInterface $output,
         EnablerInterface $enabler,
+        Transformer $transformer,
         ExpressionLanguage $expr = null
     ) {
         $this->app = $app;
         $this->output = $output;
         $this->enabler = $enabler;
+        $this->transformer = $transformer;
         if (! $expr) {
             $this->expr = new ExpressionLanguage;
         } else {
@@ -361,32 +365,21 @@ class TaskRunner
 
         // Variable substitution in arguments
         foreach ($arguments as $name => $value) {
-            $php = LightnCandy::compile(
-                $value,
-                array('flags' => LightnCandy::FLAG_INSTANCE | LightnCandy::FLAG_BESTPERFORMANCE)
-            );
-            $renderer = LightnCandy::prepare($php);
-            $value = $renderer($variables);
-
-            if ($value) {
-                if (($value[0]=='@') || ($value[0]=='!')) {
-                    $datafile = substr($value, 1);
-                    if (!file_exists($datafile)) {
-                        throw new RuntimeException("Can't load data-file: " . $datafile);
-                    }
-                    $data = file_get_contents($datafile);
-                    if ($value[0]=='!') {
-                        $php = LightnCandy::compile($data);
-                        $php = LightnCandy::compile(
-                            $data,
-                            array('flags' => LightnCandy::FLAG_INSTANCE | LightnCandy::FLAG_BESTPERFORMANCE)
-                        );
-                        $renderer = LightnCandy::prepare($php);
-                        $data = $renderer($variables);
-                    }
-                    $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
-                    $value = $data;
-                }
+            if (! is_string($value) || empty($value)) {
+                continue;
+            }
+            $value = $this->transformer->transformVariable($value, $variables);
+            if (! is_string($value) || empty($value)) {
+                $arguments[$name] = $value;
+                continue;
+            }
+            if ($value[0] == '@') {
+                $fileContent = $this->transformer->transformFile(substr($value, 1));
+                $value = $this->transformer->transformDataStream($fileContent);
+            } elseif ($value[0] == '!') {
+                $templateContent = $this->transformer->transformFile(substr($value, 1));
+                $content = $this->transformer->transformVariable($templateContent, $variables);
+                $value = $this->transformer->transformDataStream($content);
             }
             $arguments[$name] = $value;
         }

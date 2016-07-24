@@ -2,15 +2,22 @@
 
 namespace Droid\Command;
 
+use RuntimeException;
+
+use Droid\Model\Inventory\Remote\Enabler;
+use Droid\Model\Inventory\Remote\SynchroniserComposer;
+use Droid\Model\Inventory\Remote\SynchroniserPhar;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use RuntimeException;
-use Droid\Model\Inventory\Remote\Enabler;
-use Droid\Model\Inventory\Remote\SynchroniserComposer;
-use Droid\Model\Inventory\Remote\SynchroniserPhar;
+
 use Droid\TaskRunner;
+use Droid\Transform\DataStreamTransformer;
+use Droid\Transform\FileTransformer;
+use Droid\Transform\Render\LightnCandyRenderer;
+use Droid\Transform\SubstitutionTransformer;
+use Droid\Transform\Transformer;
 
 class TargetRunCommand extends Command
 {
@@ -69,7 +76,12 @@ class TargetRunCommand extends Command
         );
 
         $project = $this->getApplication()->getProject();
-        $runner = new TaskRunner($this->getApplication(), $output, $enabler);
+        $runner = new TaskRunner(
+            $this->getApplication(),
+            $output,
+            $enabler,
+            $this->buildTransformer()
+        );
 
         $output->writeln("<info>Droid: Running target `$target`</info>");
 
@@ -124,5 +136,16 @@ class TargetRunCommand extends Command
         fclose($fh);
 
         return $candidatePath;
+    }
+
+    protected function buildTransformer()
+    {
+        return new Transformer(
+            new DataStreamTransformer,
+            new FileTransformer,
+            new SubstitutionTransformer(
+                new LightnCandyRenderer
+            )
+        );
     }
 }

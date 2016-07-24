@@ -15,9 +15,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Droid\Application;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
+use Droid\Transform\Transformer;
 
 class RunRemoteCommandTest extends AutoloaderAwareTestCase
 {
+    private $app;
     private $synchroniser;
     private $enabler;
     private $output;
@@ -26,6 +28,8 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
     private $command;
     private $host;
     private $sshClient;
+    private $taskRunner;
+    private $transformer;
 
     public function setUp()
     {
@@ -67,6 +71,18 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->disableOriginalConstructor()
             ->getMock()
         ;
+        $this->transformer = $this
+            ->getMockBuilder(Transformer::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+        ;
+        $this->app = new Application($this->autoloader);
+        $this->taskRunner = new TaskRunner(
+            $this->app,
+            $this->output,
+            $this->enabler,
+            $this->transformer
+        );
 
         $this
             ->host
@@ -87,9 +103,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->method('enabled')
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array(),
@@ -109,9 +123,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->method('enabled')
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array($this->host->getName() => 'Hang in there Grommit, everything\'s under control'),
@@ -143,9 +155,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->method('getSshClient')
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array($this->host->getName() => $this->input),
@@ -173,9 +183,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->willReturn($this->sshClient)
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array($this->host->getName() => $this->input),
@@ -216,9 +224,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->willReturn(1)
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array($this->host->getName() => $this->input),
@@ -259,9 +265,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->willReturn(0)
         ;
 
-        $app = new Application($this->autoloader);
-        $runner = new TaskRunner($app, $this->output, $this->enabler);
-        $runner->runRemoteCommand(
+        $this->taskRunner->runRemoteCommand(
             $this->task,
             $this->command,
             array($this->host->getName() => $this->input),
