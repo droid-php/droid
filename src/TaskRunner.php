@@ -343,21 +343,21 @@ class TaskRunner
 
     public function prepareCommandInput(Command $command, $arguments, $variables)
     {
-        $variableString = '';
-        foreach ($variables as $name => $value) {
-            switch (gettype($value)) {
-                case 'string':
-                    $valueText = $value;
-                    break;
-                case 'array':
-                    $valueText = json_encode($value);
-                    break;
-                default:
-                    $valueText = '{' . gettype($value) . '}';
-            }
-            $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
-        }
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+            $variableString = '';
+            foreach ($variables as $name => $value) {
+                switch (gettype($value)) {
+                    case 'string':
+                        $valueText = $value;
+                        break;
+                    case 'array':
+                        $valueText = json_encode($value);
+                        break;
+                    default:
+                        $valueText = '{' . gettype($value) . '}';
+                }
+                $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
+            }
             $this->output->writeln(
                 "<comment> * TASK " . $command->getName() ."</comment> " . trim($variableString) . "</comment>"
             );
