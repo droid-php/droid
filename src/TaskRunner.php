@@ -28,20 +28,28 @@ class TaskRunner
 
     public function __construct(
         Application $app,
-        OutputInterface $output,
-        EnablerInterface $enabler,
         Transformer $transformer,
         ExpressionLanguage $expr = null
     ) {
         $this->app = $app;
-        $this->output = $output;
-        $this->enabler = $enabler;
         $this->transformer = $transformer;
         if (! $expr) {
             $this->expr = new ExpressionLanguage;
         } else {
             $this->expr = $expr;
         }
+    }
+
+    public function setEnabler(EnablerInterface $enabler)
+    {
+        $this->enabler = $enabler;
+        return $this;
+    }
+
+    public function setOutput(OutputInterface $output)
+    {
+        $this->output = $output;
+        return $this;
     }
 
     public function runTaskRemotely(Task $task, $variables, $hostsExpression)
@@ -121,6 +129,10 @@ class TaskRunner
             if ($hostsExpression && ! $this->app->hasInventory()) {
                 throw new RuntimeException(
                     'Cannot run remote commands without inventory, please use --droid-inventory'
+                );
+            } elseif ($hostsExpression && ! $this->enabler) {
+                throw new RuntimeException(
+                    'Cannot run remote commands because the local composer.json or droid.phar cannot be found'
                 );
             } elseif ($hostsExpression) {
                 $this->runTaskRemotely($task, $variables, $hostsExpression);

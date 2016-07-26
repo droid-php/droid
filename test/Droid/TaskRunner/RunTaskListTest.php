@@ -71,10 +71,12 @@ class RunTaskListTest extends AutoloaderAwareTestCase
         $this->taskRunner = $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->output, $this->enabler, $this->transformer)
+                array($this->app, $this->transformer)
             )
             ->setMethods(array('runTaskRemotely', 'runTaskLocally'))
             ->getMock()
+            ->setOutput($this->output)
+            ->setEnabler($this->enabler)
         ;
     }
 

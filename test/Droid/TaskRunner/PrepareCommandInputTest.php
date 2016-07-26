@@ -43,10 +43,13 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         ;
         $this->taskRunner = new TaskRunner(
             $this->app,
-            $this->output,
-            $this->enabler,
             $this->transformer
         );
+        $this
+            ->taskRunner
+            ->setOutput($this->output)
+            ->setEnabler($this->enabler)
+        ;
     }
 
     private function getMockCommand()
@@ -79,6 +82,26 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
             ->method('transformVariable')
             ->with($argumentValue, $variables)
             ->willReturn('pick a value; any value')
+        ;
+        $this
+            ->taskRunner
+            ->prepareCommandInput(
+                $this->command,
+                array('what' => $argumentValue),
+                $variables
+            )
+        ;
+    }
+
+    public function testWillTransformInventoryExpressionIntoInventoryProperty()
+    {
+        $argumentValue = '%some-host.name%';
+        $variables = array('some-var' => 'something');
+
+        $this
+            ->transformer
+            ->method('transformVariable')
+            ->willReturnArgument(0)
         ;
         $this
             ->taskRunner

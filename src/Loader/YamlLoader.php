@@ -2,6 +2,7 @@
 
 namespace Droid\Loader;
 
+use Exception;
 use RuntimeException;
 
 use Droid\Model\Feature\Firewall\Rule;
@@ -17,6 +18,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Parser as YamlParser;
 
 use Droid\Utils;
+use Droid\Transform\Transformer;
 
 class YamlLoader
 {
@@ -25,17 +27,23 @@ class YamlLoader
     protected $appBasedir;
     protected $modulePaths = array();
     protected $ignoreModules = false;
+    protected $transformer;
 
-    public function load(Project $project, Inventory $inventory, $appBasePath)
-    {
+    public function __construct(
+        $appBasePath,
+        Transformer $transformer
+    ) {
         $this->appBasedir = $appBasePath . DIRECTORY_SEPARATOR;
-
         $this->modulePaths[] = $this->appBasedir . 'modules';
         $this->modulePaths[] = $this->appBasedir . 'droid-vendor';
+        $this->transformer = $transformer;
+    }
 
+    public function load(Project $project, Inventory $inventory)
+    {
         $data = $this->loadYaml($project->getConfigFilePath());
-        $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
+        $this->loadProject($project, $data);
     }
 
     public function loadYaml($filename)
@@ -338,10 +346,29 @@ class YamlLoader
 
     public function loadVariables($data, $obj)
     {
-        if (isset($data['variables'])) {
-            foreach ($data['variables'] as $name => $value) {
-                $obj->setVariable($name, $value);
+        if (! isset($data['variables'])) {
+            return;
+        }
+        foreach ($data['variables'] as $name => $value) {
+            if (is_array($value)) {
+                array_walk_recursive(
+                    $value,
+                    function (&$v, $k, $txfmr) {
+                        if (! is_string($v)) {
+                            return;
+                        }
+                        $result = null;
+                        try {
+                            $result = $txfmr->transformInventory($v);
+                        } catch (Exception $e) {
+                            # No Op
+                        }
+                        $v = $result;
+                    },
+                    $this->transformer
+                );
             }
+            $obj->setVariable($name, $value);
         }
     }
 

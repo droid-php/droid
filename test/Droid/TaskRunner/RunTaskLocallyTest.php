@@ -87,7 +87,7 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->output, $this->enabler, $this->transformer)
+                array($this->app, $this->transformer)
             )
             ->setMethods(
                 array(
@@ -98,6 +98,8 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
                 )
             )
             ->getMock()
+            ->setOutput($this->output)
+            ->setEnabler($this->enabler)
         ;
     }
 

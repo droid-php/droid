@@ -9,15 +9,18 @@ class Transformer
 {
     protected $dataStreamTransformer;
     protected $fileTransformer;
+    protected $inventoryTransformer;
     protected $substitutionTransformer;
 
     public function __construct(
         DataStreamTransformer $dataStreamTransformer,
         FileTransformer $fileTransformer,
+        InventoryTransformer $inventoryTransformer,
         SubstitutionTransformer $substitutionTransformer
     ) {
         $this->dataStreamTransformer = $dataStreamTransformer;
         $this->fileTransformer = $fileTransformer;
+        $this->inventoryTransformer = $inventoryTransformer;
         $this->substitutionTransformer = $substitutionTransformer;
     }
 
@@ -53,6 +56,31 @@ class Transformer
         } catch (InvalidArgumentException $e) {
             throw new TransformerException(
                 'The supplied data could not be transformed into file content.',
+                null,
+                $e
+            );
+        } catch (Exception $e) {
+            throw new TransformerException(
+                'The failure to transform the supplied data is unexpected.',
+                null,
+                $e
+            );
+        }
+
+        return $result;
+    }
+
+    public function transformInventory($expression)
+    {
+        $result = null;
+
+        try {
+            $result = $this->inventoryTransformer->transform($expression);
+        } catch (TransformerException $e) {
+            throw $e;
+        } catch (InvalidArgumentException $e) {
+            throw new TransformerException(
+                'The supplied data could not be transformed into a property from the Inventory.',
                 null,
                 $e
             );

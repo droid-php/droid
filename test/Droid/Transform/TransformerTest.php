@@ -6,6 +6,7 @@ use InvalidArgumentException;
 
 use Droid\Transform\DataStreamTransformer;
 use Droid\Transform\FileTransformer;
+use Droid\Transform\InventoryTransformer;
 use Droid\Transform\SubstitutionTransformer;
 use Droid\Transform\Transformer;
 
@@ -13,6 +14,7 @@ class TransformerTest extends \PHPUnit_Framework_TestCase
 {
     protected $dataStreamTransformer;
     protected $fileTransformer;
+    protected $inventoryTransformer;
     protected $substitutionTransformer;
     protected $transformer;
 
@@ -26,6 +28,11 @@ class TransformerTest extends \PHPUnit_Framework_TestCase
             ->getMockBuilder(FileTransformer::class)
             ->getMock()
         ;
+        $this->inventoryTransformer = $this
+            ->getMockBuilder(InventoryTransformer::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+        ;
         $this->substitutionTransformer = $this
             ->getMockBuilder(SubstitutionTransformer::class)
             ->disableOriginalConstructor()
@@ -34,6 +41,7 @@ class TransformerTest extends \PHPUnit_Framework_TestCase
         $this->transformer = new Transformer(
             $this->dataStreamTransformer,
             $this->fileTransformer,
+            $this->inventoryTransformer,
             $this->substitutionTransformer
         );
     }
@@ -103,6 +111,40 @@ class TransformerTest extends \PHPUnit_Framework_TestCase
         $this->assertSame(
             $fakeResult,
             $this->transformer->transformFile($value)
+        );
+    }
+
+    /**
+     * @expectedException \Droid\Transform\TransformerException
+     */
+    public function testTransformInventoryThrowsTransformExceptionWithBadArgs()
+    {
+        $this
+            ->inventoryTransformer
+            ->method('transform')
+            ->willThrowException(new InvalidArgumentException)
+
+        ;
+
+        $this->transformer->transformInventory('some-value');
+    }
+
+    public function testTransformInventoryInvokesTransformerInterface()
+    {
+        $value = 'some-value';
+        $fakeResult = 'a-fake-result';
+
+        $this
+            ->inventoryTransformer
+            ->expects($this->once())
+            ->method('transform')
+            ->with($value)
+            ->willReturn($fakeResult)
+        ;
+
+        $this->assertSame(
+            $fakeResult,
+            $this->transformer->transformInventory($value)
         );
     }
 

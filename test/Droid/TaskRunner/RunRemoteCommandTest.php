@@ -79,10 +79,13 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this->app = new Application($this->autoloader);
         $this->taskRunner = new TaskRunner(
             $this->app,
-            $this->output,
-            $this->enabler,
             $this->transformer
         );
+        $this
+            ->taskRunner
+            ->setOutput($this->output)
+            ->setEnabler($this->enabler)
+        ;
 
         $this
             ->host

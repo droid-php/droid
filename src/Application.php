@@ -4,16 +4,26 @@ namespace Droid;
 
 use RuntimeException;
 
+use Droid\Model\Inventory\Inventory;
+use Droid\Model\Inventory\Remote\Enabler;
+use Droid\Model\Inventory\Remote\SynchroniserComposer;
+use Droid\Model\Inventory\Remote\SynchroniserPhar;
+use Droid\Model\Project\Project;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Droid\Model\Inventory\Inventory;
-use Droid\Model\Project\Project;
 
 use Droid\Command\TargetRunCommand;
 use Droid\Loader\YamlLoader;
+use Droid\Transform\DataStreamTransformer;
+use Droid\Transform\FileTransformer;
+use Droid\Transform\InventoryTransformer;
+use Droid\Transform\Render\LightnCandyRenderer;
+use Droid\Transform\SubstitutionTransformer;
+use Droid\Transform\Transformer;
 
 class Application extends ConsoleApplication
 {
@@ -25,6 +35,7 @@ class Application extends ConsoleApplication
     protected $droidConfig;
     protected $basePath;
     protected $loaderErrors;
+    protected $transformer;
 
     public function __construct($autoLoader, $basePath = '')
     {
@@ -34,7 +45,11 @@ class Application extends ConsoleApplication
 
         $this->setName('Droid');
         $this->setVersion('1.0.0');
-        $loader = new YamlLoader();
+
+        $this->inventory = new Inventory();
+        $this->transformer = $this->buildTransformer();
+
+        $loader = new YamlLoader($this->basePath, $this->transformer);
 
         // extract --droid-config argument, before interpreting other arguments
         foreach ($_SERVER['argv'] as $i => $argument) {
@@ -55,10 +70,9 @@ class Application extends ConsoleApplication
         }
 
         $this->project = new Project($filename);
-        $this->inventory = new Inventory();
 
         // Load droid.yml
-        $loader->load($this->project, $this->inventory, $this->basePath);
+        $loader->load($this->project, $this->inventory);
 
         $this->loaderErrors = $loader->errors;
         if ($this->loaderErrors) {
@@ -169,17 +183,95 @@ class Application extends ConsoleApplication
         }
 
         if ($this->hasProject()) {
+            $runner = new TaskRunner($this, $this->transformer);
+            $localComposerFiles = null;
+            $localDroidBinary = null;
+            try {
+                $localComposerFiles = $this->locateLocalComposerFiles();
+                $runner->setEnabler(
+                    new Enabler(new SynchroniserComposer($localComposerFiles))
+                );
+            } catch (RuntimeException $eComposer) {
+                try {
+                    $localDroidBinary = $this->locateLocalDroidBinary();
+                    $runner->setEnabler(
+                        new Enabler(new SynchroniserPhar($localDroidBinary))
+                    );
+                } catch (RuntimeException $ePhar) {
+                    # No Op
+                }
+            }
             foreach ($this->getProject()->getTargets() as $target) {
                 $command = new TargetRunCommand;
                 $command->setName($target->getName());
                 $command->setDescription("Run target: " . $target->getName());
                 $command->setTarget($target->getName());
+                $command->setTaskRunner($runner);
                 $this->add($command);
-
-                //print_r($target);
             }
         }
-        //exit();
+    }
+
+    protected function locateLocalDroidBinary()
+    {
+        $candidatePath = getcwd() . DIRECTORY_SEPARATOR
+            . $this->getDroidBinaryFilename()
+        ;
+
+        if (!file_exists($candidatePath)) {
+            throw new RuntimeException(sprintf(
+                'Unable to find the droid binary. Tried: "%s"',
+                $candidatePath
+            ));
+        }
+        $fh = fopen($candidatePath, 'rb');
+        if ($fh === false) {
+            throw new \RuntimeException(sprintf(
+                'Unable to open the droid binary file. Please check read permissions for %s.',
+                $candidatePath
+            ));
+        }
+        fclose($fh);
+
+        return $candidatePath;
+    }
+
+    protected function locateLocalComposerFiles()
+    {
+        $candidatePath = $this->basePath;
+        $composerJson = $candidatePath . DIRECTORY_SEPARATOR . 'composer.json';
+
+        if (!file_exists($composerJson)) {
+            throw new RuntimeException(sprintf(
+                'Unable to find composer.json. Tried: "%s"',
+                $composerJson
+            ));
+        }
+        $fh = fopen($composerJson, 'rb');
+        if ($fh === false) {
+            throw new \RuntimeException(sprintf(
+                'Unable to open composer.json. Please check read permissions for %s.',
+                $composerJson
+            ));
+        }
+        fclose($fh);
+
+        return $candidatePath;
+    }
+
+    protected function buildTransformer()
+    {
+        return new Transformer(
+            new DataStreamTransformer,
+            new FileTransformer,
+            new InventoryTransformer(
+                $this->inventory,
+                PropertyAccess::createPropertyAccessor()
+            ),
+            new SubstitutionTransformer(
+                new LightnCandyRenderer
+            )
+        );
     }
 
     private function getDroidFilename()
