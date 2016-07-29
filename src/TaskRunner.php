@@ -193,10 +193,14 @@ class TaskRunner
             }
         }
         foreach ($commandInput->getOptions() as $key => $value) {
-            if ($value) {
-                $out .= '--' . $key;
-                $out .= '=<info>' . $value . '</info> ';
+            if (! $value) {
+                continue;
             }
+            $out .= '--' . $key;
+            if (is_string($value)) {
+                $out .= '=<info>' . $value . '</info>';
+            }
+            $out .= ' ';
         }
         return $out;
     }
@@ -418,9 +422,10 @@ class TaskRunner
 
         foreach ($definition->getOptions() as $option) {
             $name = $option->getName();
-            if (isset($arguments[$name])) {
-                $inputs['--' . $name] = $arguments[$name];
+            if (! array_key_exists($name, $arguments)) {
+                continue;
             }
+            $inputs['--' . $name] = $arguments[$name];
         }
 
         $commandInput = new ArrayInput($inputs, $definition);
