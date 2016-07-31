@@ -25,7 +25,7 @@ class ModuleInstallCommand extends Command
         $output->writeln("Installing droid modules:");
         $project = $this->getApplication()->getProject();
         $vendorPath = 'droid-vendor';
-        
+
         if (!file_exists($vendorPath)) {
             mkdir($vendorPath);
         }
@@ -38,7 +38,7 @@ class ModuleInstallCommand extends Command
             }
             $destPath = $vendorPath . '/' . $module->getName();
             $output->writeln("- <info>" . $module->getName() . "</info> from $sourceType <comment>" . $source . "</comment>");
-            
+
             switch ($sourceType) {
                 case 'git':
                     $part = explode(" ", $module->getSource());
@@ -47,7 +47,7 @@ class ModuleInstallCommand extends Command
                     if (isset($part[1])) {
                         $branch = $part[1];
                     }
-                    
+
                     if (!file_exists($destPath)) {
                         $output->writeLn("Cloning from $url into $destPath");
                         $cmd = 'git clone ' . $url . ' ' . $destPath;
@@ -66,7 +66,7 @@ class ModuleInstallCommand extends Command
                     break;
             }
         }
-        
+
         $output->writeln("Done");
     }
 }
