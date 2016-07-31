@@ -54,7 +54,7 @@ class ModuleInstallCommand extends Command
                         exec($cmd);
                     } else {
                         $output->writeLn("  Fetching updates");
-                        $cmd = "cd $destPath && git fetch";
+                        $cmd = "cd $destPath && git pull";
                         exec($cmd);
                     }
                     $output->writeLn("  Switching to branch <comment>$branch</comment>");
