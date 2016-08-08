@@ -2,93 +2,122 @@
 
 namespace Droid;
 
+use InvalidArgumentException;
 use RuntimeException;
+use UnexpectedValueException;
 
 use Droid\Model\Inventory\Remote\EnablementException;
 use Droid\Model\Inventory\Remote\EnablerInterface;
 use Droid\Model\Project\Task;
-use LightnCandy\LightnCandy;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\ExpressionLanguage\SyntaxError;
 use Symfony\Component\Process\Process;
+
+use Droid\Transform\Transformer;
 
 class TaskRunner
 {
     private $output;
     private $app;
     private $connections = [];
+    private $expr;
+    private $transformer;
 
     public function __construct(
         Application $app,
-        OutputInterface $output,
-        EnablerInterface $enabler
+        Transformer $transformer,
+        ExpressionLanguage $expr = null
     ) {
         $this->app = $app;
-        $this->output = $output;
-        $this->enabler = $enabler;
+        $this->transformer = $transformer;
+        if (! $expr) {
+            $this->expr = new ExpressionLanguage;
+        } else {
+            $this->expr = $expr;
+        }
     }
 
-    public function runTask(Task $task, $variables, $hosts)
+    public function setEnabler(EnablerInterface $enabler)
+    {
+        $this->enabler = $enabler;
+        return $this;
+    }
+
+    public function setOutput(OutputInterface $output)
+    {
+        $this->output = $output;
+        return $this;
+    }
+
+    public function runTaskRemotely(Task $task, $variables, $hostsExpression)
     {
         $command = $this->app->find($task->getCommandName());
-        /* NOTE: The command instance gets reused between tasks.
-         * This gives the unexpected behaviour that after the first run, the app-definitions are merged
-         * This throws in the required 'command' argument, and other defaults like -v, -ansi, etc
-         *
-         * The issue is now resolved as tasks are now executed in external process (runLocalCommand)
-         * but will return if the command is called with ->run
-         */
 
-        if (!$command) {
-            throw new RuntimeException("Unsupported command: " . $task->getCommandName());
+        $items = $this->getTaskItems($task, $variables);
+        if (empty($items)) {
+            return;
         }
-        $items = $task->getItems();
-        if (is_string($items)) {
-            // it's a variable name, resolve it into an array
-            $var = $items;
-            if (!isset($variables[$var])) {
-                throw new RuntimeException("Items is refering to non-existant variable: " . $var);
+
+        $taskHosts = $this->getTaskHosts($task, $variables, $hostsExpression);
+        $summaryOfHosts = $this->getSummaryOfHosts($hostsExpression, $task->getHostFilter());
+
+        foreach ($items as $item) {
+            $variables['item'] = $item;
+            $this->output->writeln(
+                sprintf(
+                    '<comment>%s `%s`</comment>: <info>%s</info> on <comment>%s</comment>',
+                    ucfirst($task->getType()),
+                    $task->getName(),
+                    $command->getName(),
+                    $summaryOfHosts
+                )
+            );
+            $commandInput = array();
+            foreach ($taskHosts as $host) {
+                $perHostVars = array_merge($variables, array('host' => $host));
+                $commandInput[$host->name] = $this
+                    ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
+                ;
+                $printableArgs = $this->commandInputToText($commandInput[$host->name]);
+                if ($printableArgs === '') {
+                    $printableArgs = 'with zero arguments';
+                }
+                $this->output->writeln(
+                    sprintf('<comment>Host %s</comment>: %s', $host->name, $printableArgs)
+                );
             }
-            $items = $variables[$var];
+            $this->runRemoteCommand($task, $command, $commandInput, $taskHosts);
         }
-        if (!is_array($items)) {
-            throw new RuntimeException("Items is not an array: " . gettype($items));
-        }
+    }
+
+    public function runTaskLocally(Task $task, $variables)
+    {
+        $command = $this->app->find($task->getCommandName());
+
+        $items = $this->getTaskItems($task, $variables);
+
         foreach ($items as $item) {
             $variables['item'] = $item;
             $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
-
-            $out = "<comment>" . ucfirst($task->getType()) . " `" . $task->getName() . "`</comment>: <info>" . $command->getName() ."</info> ";
-            $out .= $this->commandInputToText($commandInput);
-            if ($hosts) {
-                $out .= "on <comment>" . $hosts . "</comment>";
-            } else {
-                $out .= "on <comment>local</comment>";
-            }
-
-            $this->output->writeln($out);
-
-            if ($hosts) {
-                if (!$this->app->hasInventory()) {
-                    throw new RuntimeException(
-                        "Can't run remote commands without inventory, please use --droid-inventory"
-                    );
-                }
-                $inventory = $this->app->getInventory();
-                $hostArray = $inventory->getHostsByName($hosts);
-
-                $res = $this->runRemoteCommand($task, $command, $commandInput, $hostArray);
-            } else {
-                $res = $this->runLocalCommand($task, $command, $commandInput);
-            }
-            if ($res) {
+            $this->output->writeln(
+                sprintf(
+                    '<comment>%s `%s`</comment>: <info>%s</info> %s <comment>locally</comment>',
+                    ucfirst($task->getType()),
+                    $task->getName(),
+                    $command->getName(),
+                    $this->commandInputToText($commandInput)
+                )
+            );
+            if ($this->runLocalCommand($task, $command, $commandInput)) {
                 throw new RuntimeException("Task failed: " . $task->getCommandName());
             }
         }
     }
 
-    public function runTaskList($project, $list, $variables, $defaultHosts)
+    public function runTaskList($list, $variables, $targetHosts)
     {
         // Build up '$triggers' array for all changed tasks
         $triggers = [];
@@ -96,32 +125,43 @@ class TaskRunner
         $tasks = $list->getTasksByType('task');
 
         foreach ($tasks as $task) {
-            $hosts = $defaultHosts;
-            if ($task->getHosts()!='') {
-                $hosts = $task->getHosts();
+            $hostsExpression = $task->getHosts() ?: $targetHosts;
+            if ($hostsExpression && ! $this->app->hasInventory()) {
+                throw new RuntimeException(
+                    'Cannot run remote commands without inventory, please use --droid-inventory'
+                );
+            } elseif ($hostsExpression && ! $this->enabler) {
+                throw new RuntimeException(
+                    'Cannot run remote commands because the local composer.json or droid.phar cannot be found'
+                );
+            } elseif ($hostsExpression) {
+                $this->runTaskRemotely($task, $variables, $hostsExpression);
+            } else {
+                $this->runTaskLocally($task, $variables);
             }
-            $this->runTask($task, $variables, $hosts);
-        }
-
-        foreach ($tasks as $task) {
-            if ($task->getChanged()) {
-                foreach ($task->getTriggers() as $name) {
-                    $triggers[$name] = $name;
+            if (! $task->getChanged()) {
+                continue;
+            }
+            foreach ($task->getTriggers() as $name) {
+                if (array_key_exists($name, $triggers)) {
+                    continue;
                 }
+                $listedTrigger = $list->getTaskByName($name);
+                if (!$listedTrigger) {
+                    throw new RuntimeException("Unknown trigger: " . $name);
+                }
+                $triggers[$name] = $listedTrigger;
             }
         }
 
         // Call all triggered handlers
-        foreach ($triggers as $name) {
-            $task = $list->getTaskByName($name);
-            if (!$task) {
-                throw new RuntimeException("Unknown trigger: " . $name);
+        foreach ($triggers as $trigger) {
+            $hostsExpression = $trigger->getHosts() ?: $targetHosts;
+            if ($hostsExpression) {
+                $this->runTaskRemotely($trigger, $variables, $hostsExpression);
+            } else {
+                $this->runTaskLocally($trigger, $variables);
             }
-            $hosts = $defaultHosts;
-            if ($task->getHosts()) {
-                $hosts = $task->getHosts();
-            }
-            $this->runTask($task, $variables, $hosts);
         }
     }
 
@@ -133,13 +173,13 @@ class TaskRunner
         }
 
         foreach ($target->getModules() as $module) {
-            $variables = array_merge($module->getVariables(), $project->getVariables(), $target->getVariables());
+            $variables = array_merge($module->variables, $project->variables, $target->variables);
             $variables['mod_path'] = $module->getBasePath();
-            $this->runTaskList($project, $module, $variables, $target->getHosts());
+            $this->runTaskList($module, $variables, $target->getHosts());
         }
 
-        $variables = array_merge($project->getVariables(), $target->getVariables());
-        $this->runTaskList($project, $target, $variables, $target->getHosts());
+        $variables = array_merge($project->variables, $target->variables);
+        $this->runTaskList($target, $variables, $target->getHosts());
         return 0;
     }
 
@@ -153,10 +193,14 @@ class TaskRunner
             }
         }
         foreach ($commandInput->getOptions() as $key => $value) {
-            if ($value) {
-                $out .= '--' . $key;
-                $out .= '=<info>' . $value . '</info> ';
+            if (! $value) {
+                continue;
             }
+            $out .= '--' . $key;
+            if (is_string($value)) {
+                $out .= '=<info>' . $value . '</info>';
+            }
+            $out .= ' ';
         }
         return $out;
     }
@@ -208,11 +252,43 @@ class TaskRunner
         return $process->getExitCode();
     }
 
-    public function runRemoteCommand(Task $task, Command $command, ArrayInput $commandInput, $hosts)
+    /**
+     * Run a command on the supplied hosts.
+     *
+     * @param Task $task
+     * @param Command $command
+     * @param array $commandInput An array of ArrayInput instances indexed by
+     *                            host name
+     * @param array $hosts The list of hosts on which to run the command
+     *
+     * @throws InvalidArgumentException when $commandInput is not an array or
+     *                                  is missing an ArrayInput for a host
+     * @throws RuntimeException
+     *
+     * @return number always zero
+     */
+    public function runRemoteCommand(Task $task, Command $command, $commandInput, $hosts)
     {
+        if (!is_array($commandInput)) {
+            throw new InvalidArgumentException(
+                'Expected $commandInput as an array of ArrayInput instances'
+            );
+        }
+
         $running = array();
 
         foreach ($hosts as $host) {
+            if (!isset($commandInput[$host->getName()])
+                || ! $commandInput[$host->getName()] instanceof ArrayInput
+            ) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Expected an ArrayInput for host "%s".',
+                        $host->getName()
+                    )
+                );
+            }
+
             if (!$host->enabled()) {
                 # we will wait for a host to be enabled before doing real work
                 try {
@@ -232,8 +308,10 @@ class TaskRunner
 
             $cmd = array(
                 sprintf('cd %s;', $host->getWorkingDirectory()),
-                $host->getDroidCommandPrefix(), $command->getName(),
-                (string) $commandInput, '--ansi'
+                $host->getDroidCommandPrefix(),
+                $command->getName(),
+                (string) $commandInput[$host->getName()],
+                '--ansi'
             );
 
             if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
@@ -275,26 +353,27 @@ class TaskRunner
                 $ssh->getExitCode()
             ));
         }
+
         return 0;
     }
 
     public function prepareCommandInput(Command $command, $arguments, $variables)
     {
-        $variableString = '';
-        foreach ($variables as $name => $value) {
-            switch (gettype($value)) {
-                case 'string':
-                    $valueText = $value;
-                    break;
-                case 'array':
-                    $valueText = json_encode($value);
-                    break;
-                default:
-                    $valueText = '{' . gettype($value) . '}';
-            }
-            $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
-        }
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+            $variableString = '';
+            foreach ($variables as $name => $value) {
+                switch (gettype($value)) {
+                    case 'string':
+                        $valueText = $value;
+                        break;
+                    case 'array':
+                        $valueText = json_encode($value);
+                        break;
+                    default:
+                        $valueText = '{' . gettype($value) . '}';
+                }
+                $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
+            }
             $this->output->writeln(
                 "<comment> * TASK " . $command->getName() ."</comment> " . trim($variableString) . "</comment>"
             );
@@ -302,25 +381,21 @@ class TaskRunner
 
         // Variable substitution in arguments
         foreach ($arguments as $name => $value) {
-            $php = LightnCandy::compile($value);
-            $renderer = LightnCandy::prepare($php);
-            $value = $renderer($variables);
-
-            if ($value) {
-                if (($value[0]=='@') || ($value[0]=='!')) {
-                    $datafile = substr($value, 1);
-                    if (!file_exists($datafile)) {
-                        throw new RuntimeException("Can't load data-file: " . $datafile);
-                    }
-                    $data = file_get_contents($datafile);
-                    if ($value[0]=='!') {
-                        $php = LightnCandy::compile($data);
-                        $renderer = LightnCandy::prepare($php);
-                        $data = $renderer($variables);
-                    }
-                    $data = 'data:application/octet-stream;charset=utf-8;base64,' . base64_encode($data);
-                    $value = $data;
-                }
+            if (! is_string($value) || empty($value)) {
+                continue;
+            }
+            $value = $this->transformer->transformVariable($value, $variables);
+            if (! is_string($value) || empty($value)) {
+                $arguments[$name] = $value;
+                continue;
+            }
+            if ($value[0] == '@') {
+                $fileContent = $this->transformer->transformFile(substr($value, 1));
+                $value = $this->transformer->transformDataStream($fileContent);
+            } elseif ($value[0] == '!') {
+                $templateContent = $this->transformer->transformFile(substr($value, 1));
+                $content = $this->transformer->transformVariable($templateContent, $variables);
+                $value = $this->transformer->transformDataStream($content);
             }
             $arguments[$name] = $value;
         }
@@ -347,12 +422,75 @@ class TaskRunner
 
         foreach ($definition->getOptions() as $option) {
             $name = $option->getName();
-            if (isset($arguments[$name])) {
-                $inputs['--' . $name] = $arguments[$name];
+            if (! array_key_exists($name, $arguments)) {
+                continue;
             }
+            $inputs['--' . $name] = $arguments[$name];
         }
 
         $commandInput = new ArrayInput($inputs, $definition);
         return $commandInput;
+    }
+
+    private function getTaskItems(Task $task, $variables)
+    {
+        $items = $task->getItems();
+        if (is_string($items)) {
+            // it's a variable name, resolve it into an array
+            if (!isset($variables[$items])) {
+                throw new RuntimeException("Items is refering to non-existant variable: " . $items);
+            }
+            $items = $variables[$items];
+        }
+        if (!is_array($items)) {
+            throw new RuntimeException("Items is not an array: " . gettype($items));
+        }
+        return $items;
+    }
+
+    private function getSummaryOfHosts($hostsExpression, $hostFilter = null)
+    {
+        if ($hostFilter) {
+            return sprintf('%s where "%s"', $hostsExpression, $hostFilter);
+        }
+        return $hostsExpression;
+    }
+
+    private function getTaskHosts($task, $variables, $hostsExpression)
+    {
+        if (! $this->app->hasInventory()) {
+            throw new RuntimeException(
+                'Cannot run remote commands without inventory, please use --droid-inventory'
+            );
+        }
+
+        $candidateHosts = $this->app->getInventory()->getHostsByName($hostsExpression);
+
+        if (empty($candidateHosts)) {
+            return array();
+        } elseif (! $task->getHostFilter()) {
+            return $candidateHosts;
+        }
+
+        $taskHosts = array();
+
+        foreach ($candidateHosts as $host) {
+            try {
+                if ($this->expr->evaluate($task->getHostFilter(), array('host' => $host))) {
+                    $taskHosts[] = $host;
+                }
+            } catch (SyntaxError $e) {
+                throw new UnexpectedValueException(
+                    sprintf(
+                        'Unable to parse Task host_filter expression "%s"',
+                        $task->getHostFilter()
+                    ),
+                    null,
+                    $e
+                );
+            }
+        }
+
+        return $taskHosts;
     }
 }

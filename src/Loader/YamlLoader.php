@@ -2,6 +2,7 @@
 
 namespace Droid\Loader;
 
+use Exception;
 use RuntimeException;
 
 use Droid\Model\Feature\Firewall\Rule;
@@ -13,46 +14,88 @@ use Droid\Model\Project\Project;
 use Droid\Model\Project\RegisteredCommand;
 use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Parser as YamlParser;
 
 use Droid\Utils;
+use Droid\Transform\Transformer;
 
 class YamlLoader
 {
+    public $errors = array();
+
     protected $appBasedir;
     protected $modulePaths = array();
     protected $ignoreModules = false;
+    protected $transformer;
 
-    public function load(Project $project, Inventory $inventory, $appBasePath)
-    {
+    public function __construct(
+        $appBasePath,
+        Transformer $transformer
+    ) {
         $this->appBasedir = $appBasePath . DIRECTORY_SEPARATOR;
-
         $this->modulePaths[] = $this->appBasedir . 'modules';
         $this->modulePaths[] = $this->appBasedir . 'droid-vendor';
+        $this->transformer = $transformer;
+    }
 
+    public function load(Project $project, Inventory $inventory)
+    {
         $data = $this->loadYaml($project->getConfigFilePath());
-        $this->loadProject($project, $data);
         $this->loadInventory($inventory, $data);
+        $this->loadProject($project, $data);
     }
 
     public function loadYaml($filename)
     {
 
         if (!file_exists($filename)) {
-            throw new RuntimeException("File not found: $filename");
+            $this->errors[] = sprintf(
+                'Failed to load yaml file "%s": File not found.',
+                $filename
+            );
+            return array();
         }
 
         $parser = new YamlParser();
-        $data = $parser->parse(file_get_contents($filename));
+        $data = null;
+        try {
+            $data = $parser->parse(file_get_contents($filename));
+            if (! is_array($data)) {
+                $this->errors[] = sprintf(
+                    'Failed to get any yaml content from file "%s".',
+                    $filename
+                );
+                return array();
+            }
+        } catch (ParseException $e) {
+            $this->errors[] = sprintf(
+                'Failed to parse yaml content from file "%s": %s',
+                $filename,
+                $e->getMessage()
+            );
+            return array();
+        }
         if (isset($data['include'])) {
             foreach ($data['include'] as $line) {
                 $filenames = glob($line);
                 if (count($filenames)==0) {
-                    throw new RuntimeException("Include(s) not found: " . $line);
+                    $this->errors[] = sprintf(
+                        'Failed to include any files after processing Include directive "%s".',
+                        $line
+                    );
+                    continue;
                 }
                 foreach ($filenames as $filename) {
-                    if (!file_exists($filename)) {
-                        throw new RuntimeException("Include filename does not exist: " . $filename);
+                    if (! is_file($filename)) {
+                        continue;
+                    }
+                    if (! is_readable($filename)) {
+                        $this->errors[] = sprintf(
+                            'Failed to include "%s". File is not readable.',
+                            $filename
+                        );
+                        continue;
                     }
                     $includeData = $this->loadYaml($filename);
                     $data = array_merge_recursive($data, $includeData);
@@ -125,10 +168,12 @@ class YamlLoader
                 return $modulePath;
             }
         }
-        if ($this->ignoreModules) {
-            return;
+        if (! $this->ignoreModules) {
+            $this->errors[] = sprintf(
+                'The module "%s" could not be found. Try running droid module:install.',
+                $module->getName()
+            );
         }
-        throw new RuntimeException("Module path not found for: " . $module->getName());
     }
 
     public function loadModule(Module $module)
@@ -204,16 +249,16 @@ class YamlLoader
                         $this->loadVariables($hostData, $host);
                         break;
                     case 'public_ip':
-                        $host->setPublicIp($value);
+                        $host->public_ip = $value;
                         break;
                     case 'private_ip':
-                        $host->setPrivateIp($value);
+                        $host->private_ip = $value;
                         break;
                     case 'public_port':
-                        $host->setPublicPort($value);
+                        $host->public_port = $value;
                         break;
                     case 'private_port':
-                        $host->setPrivatePort($value);
+                        $host->private_port = $value;
                         break;
                     case 'username':
                         $host->setUsername($value);
@@ -260,6 +305,25 @@ class YamlLoader
                 ->setSshGateway($inventory->getHost($gateway))
             ;
         }
+
+        # sanity check of hosts
+        $inventoryHosts = $inventory->getHosts();
+        if (empty($inventoryHosts)) {
+            $this->errors[] = 'Inventory is devoid of Hosts.';
+            return;
+        }
+        $incompleteHosts = array();
+        foreach ($inventoryHosts as $host) {
+            if (! $host->getConnectionIp()) {
+                $incompleteHosts[] = $host->name;
+            }
+        }
+        if ($incompleteHosts) {
+            $this->errors[] = sprintf(
+                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (public_ip): %s.',
+                implode(', ', $incompleteHosts)
+            );
+        }
     }
 
     private function loadHostGroups(Inventory $inventory, $groups)
@@ -282,10 +346,29 @@ class YamlLoader
 
     public function loadVariables($data, $obj)
     {
-        if (isset($data['variables'])) {
-            foreach ($data['variables'] as $name => $value) {
-                $obj->setVariable($name, $value);
+        if (! isset($data['variables'])) {
+            return;
+        }
+        foreach ($data['variables'] as $name => $value) {
+            if (is_array($value)) {
+                array_walk_recursive(
+                    $value,
+                    function (&$v, $k, $txfmr) {
+                        if (! is_string($v)) {
+                            return;
+                        }
+                        $result = null;
+                        try {
+                            $result = $txfmr->transformInventory($v);
+                        } catch (Exception $e) {
+                            # No Op
+                        }
+                        $v = $result;
+                    },
+                    $this->transformer
+                );
             }
+            $obj->setVariable($name, $value);
         }
     }
 
@@ -315,6 +398,9 @@ class YamlLoader
                         break;
                     case 'hosts':
                         $task->setHosts($taskNode[$key]);
+                        break;
+                    case 'host_filter':
+                        $task->setHostFilter($taskNode[$key]);
                         break;
                     case 'trigger':
                         // TODO: Support array of triggers
