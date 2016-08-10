@@ -226,6 +226,9 @@ class YamlLoader
             if (isset($ruleData['direction'])) {
                 $rule->setDirection($ruleData['direction']);
             }
+            if (isset($ruleData['comment'])) {
+                $rule->setComment($ruleData['comment']);
+            }
             if (isset($ruleData['action'])) {
                 $rule->setAction($ruleData['action']);
             }
