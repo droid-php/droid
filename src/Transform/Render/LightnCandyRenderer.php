@@ -41,6 +41,7 @@ class LightnCandyRenderer implements RendererInterface
         return
             LightnCandy::FLAG_INSTANCE
             | LightnCandy::FLAG_BESTPERFORMANCE
+            | LightnCandy::FLAG_ELSE
         ;
     }
 }
