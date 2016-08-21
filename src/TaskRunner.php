@@ -79,7 +79,7 @@ class TaskRunner
             foreach ($taskHosts as $host) {
                 $perHostVars = array_merge($variables, array('host' => $host));
                 // Allow host-level variables to override project, module and target variables 
-                $perHostVars = array_merge($perHostVars, $host['variables']));
+                $perHostVars = array_merge($perHostVars, $host->getVariables());
                 $commandInput[$host->name] = $this
                     ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
                 ;
