@@ -335,12 +335,14 @@ class YamlLoader
             $group = new HostGroup($groupName);
             $this->loadRules($group, $groupNode);
 
-            foreach ($groupNode['hosts'] as $hostName) {
-                if (!$inventory->hasHost($hostName)) {
-                    throw new RuntimeException("Host group `$groupName` refers to undefined host: `$hostName`");
+            if (isset($groupNode['hosts'])) {
+                foreach ($groupNode['hosts'] as $hostName) {
+                    if (!$inventory->hasHost($hostName)) {
+                        throw new RuntimeException("Host group `$groupName` refers to undefined host: `$hostName`");
+                    }
+                    $host = $inventory->getHost($hostName);
+                    $group->addHost($host);
                 }
-                $host = $inventory->getHost($hostName);
-                $group->addHost($host);
             }
             $this->loadVariables($groupNode, $group);
             $inventory->addHostGroup($group);
