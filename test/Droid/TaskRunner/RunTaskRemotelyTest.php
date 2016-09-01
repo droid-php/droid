@@ -279,6 +279,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
                     array(
                         'item' => 'an-inconsequential-value',
                         'host' => $hostYes,
+                        'rehab' => 'yes',
                     )
                 ),
                 array(
@@ -287,6 +288,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
                     array(
                         'item' => 'an-inconsequential-value',
                         'host' => $hostNo,
+                        'rehab' => 'no-no-no',
                     )
                 )
             )
@@ -374,6 +376,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
                 array(
                     'item' => 'an-inconsequential-value',
                     'host' => $hostYes,
+                    'rehab' => 'yes',
                 )
             )
             ->willReturn($commandInput)
