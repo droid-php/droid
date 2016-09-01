@@ -447,7 +447,27 @@ class TaskRunner
         if (!is_array($items)) {
             throw new RuntimeException("Items is not an array: " . gettype($items));
         }
-        return $items;
+        if (! $task->getItemFilter()) {
+            return $items;
+        }
+        $selectedItems = array();
+        foreach ($items as $candidate) {
+            try {
+                if ($this->expr->evaluate($task->getItemFilter(), array('item' => $candidate))) {
+                    $selectedItems[] = $candidate;
+                }
+            } catch (SyntaxError $e) {
+                throw new UnexpectedValueException(
+                    sprintf(
+                        'Unable to parse Task with_items_filter expression "%s"',
+                        $task->getItemFilter()
+                    ),
+                null,
+                $e
+                );
+            }
+        }
+        return $selectedItems;
     }
 
     private function getSummaryOfHosts($hostsExpression, $hostFilter = null)

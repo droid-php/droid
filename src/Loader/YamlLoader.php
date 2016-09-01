@@ -396,6 +396,9 @@ class YamlLoader
                     case 'with_items':
                         $task->setItems($taskNode[$key]);
                         break;
+                    case 'with_items_filter':
+                        $task->setItemFilter($taskNode[$key]);
+                        break;
                     case 'arguments':
                         foreach ($taskNode['arguments'] as $var => $val) {
                             $task->setArgument($var, $val);
