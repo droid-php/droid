@@ -234,12 +234,15 @@ class TaskRunner
 
     public function runLocalCommand(Task $task, Command $command, ArrayInput $commandInput)
     {
-        //$commandInput->setArgument('command', $command->getName());
-        //$res = $command->run($commandInput, $this->output);
-
-        $argv = $_SERVER['argv'];
-        $filename = $argv[0];
-        $process = new Process($filename . ' ' . $command->getName() . ' ' . (string)$commandInput . ' --ansi');
+        $process = new Process(
+            sprintf(
+                '%s%s %s %s --ansi',
+                $task->getElevatePrivileges() ? 'sudo ' : '',
+                $_SERVER['argv'][0],
+                $command->getName(),
+                (string) $commandInput
+            )
+        );
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
             $this->output->writeLn("Full command-line: " . $process->getCommandLine());
         }
@@ -307,10 +310,13 @@ class TaskRunner
                 $runner->taskOutput($task, $type, $buf, $host->getName());
             };
 
-
             $cmd = array(
                 sprintf('cd %s;', $host->getWorkingDirectory()),
-                $host->getDroidCommandPrefix(),
+                sprintf(
+                    '%s%s',
+                    $task->getElevatePrivileges() ? 'sudo ' : '',
+                    $host->getDroidCommandPrefix()
+                ),
                 $command->getName(),
                 (string) $commandInput[$host->getName()],
                 '--ansi'

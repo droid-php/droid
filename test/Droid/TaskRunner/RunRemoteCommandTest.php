@@ -252,6 +252,30 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this
             ->host
             ->expects($this->once())
+            ->method('getWorkingDirectory')
+            ->willReturn('/tmp')
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('getDroidCommandPrefix')
+            ->willReturn('droid')
+        ;
+        $this
+            ->command
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn('do:something')
+        ;
+        $this
+            ->input
+            ->expects($this->once())
+            ->method('__toString')
+            ->willReturn('--now')
+        ;
+        $this
+            ->host
+            ->expects($this->once())
             ->method('getSshClient')
             ->willReturn($this->sshClient)
         ;
@@ -259,7 +283,94 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->sshClient
             ->expects($this->once())
             ->method('startExec')
-            ->with($this->isType('array'))
+            ->with(
+                array(
+                    'cd /tmp;',
+                    'droid',
+                    'do:something',
+                    '--now',
+                    '--ansi',
+                )
+            )
+        ;
+        $this
+            ->sshClient
+            ->expects($this->once())
+            ->method('getExitCode')
+            ->willReturn(0)
+        ;
+
+        $this->taskRunner->runRemoteCommand(
+            $this->task,
+            $this->command,
+            array($this->host->getName() => $this->input),
+            array($this->host)
+        );
+    }
+
+    public function testRunRemoteCommandElevated()
+    {
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('enabled')
+            ->willReturn(false)
+        ;
+        $this
+            ->enabler
+            ->expects($this->once())
+            ->method('enable')
+            ->with($this->host)
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('getWorkingDirectory')
+            ->willReturn('/tmp')
+        ;
+        $this
+            ->task
+            ->expects($this->once())
+            ->method('getElevatePrivileges')
+            ->willReturn(true)
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('getDroidCommandPrefix')
+            ->willReturn('droid')
+        ;
+        $this
+            ->command
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn('do:something')
+        ;
+        $this
+            ->input
+            ->expects($this->once())
+            ->method('__toString')
+            ->willReturn('--now')
+        ;
+        $this
+            ->host
+            ->expects($this->once())
+            ->method('getSshClient')
+            ->willReturn($this->sshClient)
+        ;
+        $this
+            ->sshClient
+            ->expects($this->once())
+            ->method('startExec')
+            ->with(
+                array(
+                    'cd /tmp;',
+                    'sudo droid',
+                    'do:something',
+                    '--now',
+                    '--ansi',
+                )
+            )
         ;
         $this
             ->sshClient
