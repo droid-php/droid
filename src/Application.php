@@ -13,6 +13,7 @@ use Droid\Model\Inventory\Remote\SynchroniserPhar;
 use Droid\Model\Project\Project;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -20,6 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Command\TargetRunCommand;
 use Droid\Loader\YamlLoader;
+use Droid\Logger\LoggerFactory;
 use Droid\Transform\DataStreamTransformer;
 use Droid\Transform\FileTransformer;
 use Droid\Transform\InventoryTransformer;
@@ -101,7 +103,21 @@ class Application extends ConsoleApplication
             exit(1);
         }
 
+        $this->configureOutput($output);
+
         return parent::run($input, $output);
+    }
+
+    private function configureOutput(OutputInterface $output)
+    {
+        $formatter = $output->getFormatter();
+        if (!$formatter) {
+            return;
+        }
+        $formatter->setStyle(
+            'host',
+            new OutputFormatterStyle('black', 'blue', array('reverse'))
+        );
     }
 
     protected function formatErrorMessages($messages)
@@ -185,7 +201,11 @@ class Application extends ConsoleApplication
         }
 
         if ($this->hasProject()) {
-            $runner = new TaskRunner($this, $this->transformer);
+            $runner = new TaskRunner(
+                $this,
+                $this->transformer,
+                new LoggerFactory
+            );
             $enabler = $this->configureHostEnabler();
             if (! $enabler) {
                 # TODO output a warning about not being able to run remote cmds

@@ -4,15 +4,17 @@ namespace Droid\Test\TaskRunner;
 
 use Droid\Model\Inventory\Remote\AbleInterface;
 use Droid\Model\Inventory\Remote\EnablementException;
-use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\Enabler;
 use Droid\Model\Inventory\Remote\SynchroniserInterface;
 use Droid\Model\Project\Task;
+use Psr\Log\LoggerInterface;
 use SSHClient\Client\ClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Application;
+use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
 use Droid\Transform\Transformer;
@@ -22,6 +24,8 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
     private $app;
     private $synchroniser;
     private $enabler;
+    private $logger;
+    private $loggerFac;
     private $output;
     private $input;
     private $task;
@@ -39,13 +43,26 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             ->getMock()
         ;
         $this->enabler = $this
-            ->getMockBuilder(EnablerInterface::class)
+            ->getMockBuilder(Enabler::class)
             ->setConstructorArgs(array($this->synchroniser))
             ->getMock()
         ;
         $this->task = $this
             ->getMockBuilder(Task::class)
             ->getMock()
+        ;
+        $this->logger = $this
+            ->getMockBuilder(LoggerInterface::class)
+            ->getMock()
+        ;
+        $this->loggerFac = $this
+            ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this
+            ->loggerFac
+            ->method('makeLogger')
+            ->willReturn($this->logger)
         ;
         $this->output = $this
             ->getMockBuilder(OutputInterface::class)
@@ -79,12 +96,13 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this->app = new Application($this->autoloader);
         $this->taskRunner = new TaskRunner(
             $this->app,
-            $this->transformer
+            $this->transformer,
+            $this->loggerFac
         );
         $this
             ->taskRunner
-            ->setOutput($this->output)
             ->setEnabler($this->enabler)
+            ->setOutput($this->output)
         ;
 
         $this

@@ -4,13 +4,15 @@ namespace Droid\Test\TaskRunner;
 
 use Droid\Model\Inventory\Host;
 use Droid\Model\Inventory\Inventory;
-use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\Enabler;
 use Droid\Model\Project\Task;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Application;
+use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
 use Droid\Transform\Transformer;
@@ -22,6 +24,8 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
     private $enabler;
     private $host;
     private $inventory;
+    private $logger;
+    private $loggerFac;
     private $output;
     private $task;
     private $taskRunner;
@@ -32,7 +36,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
         $this->app = $this->getPartialMockApplication();
         $this->command = $this->getMockCommand();
         $this->enabler = $this
-            ->getMockBuilder(EnablerInterface::class)
+            ->getMockBuilder(Enabler::class)
             ->disableOriginalConstructor()
             ->getMock()
         ;
@@ -44,6 +48,19 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
         $this->inventory = $this
             ->getMockBuilder(Inventory::class)
             ->getMock()
+        ;
+        $this->logger = $this
+            ->getMockBuilder(LoggerInterface::class)
+            ->getMock()
+        ;
+        $this->loggerFac = $this
+            ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this
+            ->loggerFac
+            ->method('makeLogger')
+            ->willReturn($this->logger)
         ;
         $this->output = $this
             ->getMockBuilder(OutputInterface::class)
@@ -81,7 +98,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer)
+                array($this->app, $this->transformer, $this->loggerFac)
             )
             ->setMethods(
                 array(
@@ -92,8 +109,8 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
                 )
             )
             ->getMock()
-            ->setOutput($this->output)
             ->setEnabler($this->enabler)
+            ->setOutput($this->output)
         ;
     }
 
