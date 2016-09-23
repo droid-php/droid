@@ -255,7 +255,10 @@ class TaskRunner
             $this->output->writeLn("Full command-line: " . $process->getCommandLine());
         }
 
-        $process->start();
+        $process
+            ->setTimeout($task->getMaxRuntime())
+            ->start()
+        ;
         $output = $this->output;
         $runner = $this;
         $process->wait(function ($type, $buf) use ($runner, $task, $output) {
@@ -338,9 +341,19 @@ class TaskRunner
                 );
             }
 
+            $max_runtime = null;
+            $unlimited_runtime = false;
+            if ($task->getMaxRuntime() === 0) {
+                $unlimited_runtime = true;
+            } else if ($task->getMaxRuntime()) {
+                $max_runtime = $task->getMaxRuntime();
+            }
+
             $ssh->startExec(
                 $cmd,
-                $outputter
+                $outputter,
+                $max_runtime,
+                $unlimited_runtime
             );
             $running[] = array($host, $ssh);
         }

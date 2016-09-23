@@ -410,6 +410,9 @@ class YamlLoader
                     case 'host_filter':
                         $task->setHostFilter($taskNode[$key]);
                         break;
+                    case 'max_runtime':
+                        $task->setMaxRuntime($taskNode[$key]);
+                        break;
                     case 'sudo':
                         if (is_bool($taskNode[$key])) {
                             $task->setElevatePrivileges($taskNode[$key]);
