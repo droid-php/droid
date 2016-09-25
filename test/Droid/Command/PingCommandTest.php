@@ -108,49 +108,6 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException RuntimeException
-     * @expectedExceptionMessage I cannot ping the host named "some-host-name": there is no "keyfile" (SSH IdentityFile) configured with which to authenticate the "some-user-name" user
-     * @covers \Droid\Command\PingCommand::configure
-     * @covers \Droid\Command\PingCommand::execute
-     */
-    public function testCommandWithNameOfImproperlyConfiguredHostWillThrowException()
-    {
-        $this->command->setInventory($this->inventory);
-        $this
-            ->inventory
-            ->method('getHosts')
-            ->willReturn(array($this->host))
-        ;
-        $this
-            ->inventory
-            ->method('getHost')
-            ->willReturn($this->host)
-        ;
-        $this
-            ->host
-            ->expects($this->once())
-            ->method('getKeyFile')
-            ->willReturn(null)
-        ;
-        $this
-            ->host
-            ->expects($this->once())
-            ->method('getName')
-            ->willReturn('some-host-name')
-        ;
-        $this
-            ->host
-            ->expects($this->once())
-            ->method('getUsername')
-            ->willReturn('some-user-name')
-        ;
-        $this->tester->execute(array(
-            'command' => $this->command->getName(),
-            'hostname' => 'some-host-name',
-        ));
-    }
-
-    /**
      * @covers \Droid\Command\PingCommand::execute
      */
     public function testCommandWithFailedPingWillOutputErrorMessage()
@@ -165,12 +122,6 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
             ->inventory
             ->method('getHost')
             ->willReturn($this->host)
-        ;
-        $this
-            ->host
-            ->expects($this->once())
-            ->method('getKeyFile')
-            ->willReturn('file')
         ;
         $this
             ->host
@@ -241,12 +192,6 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
         $this
             ->host
             ->expects($this->once())
-            ->method('getKeyFile')
-            ->willReturn('file')
-        ;
-        $this
-            ->host
-            ->expects($this->once())
             ->method('getSshClient')
             ->willReturn($this->ssh)
         ;
@@ -309,19 +254,13 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
      * @covers \Droid\Command\PingCommand::configure
      * @covers \Droid\Command\PingCommand::execute
      */
-    public function testCommandWithoutArgsWillPingAllSuitableHosts()
+    public function testCommandWithoutArgsWillPingAllHosts()
     {
         $this->command->setInventory($this->inventory);
         $this
             ->inventory
             ->method('getHosts')
-            ->willReturn(array($this->host, $this->host, $this->host))
-        ;
-        $this
-            ->host
-            ->expects($this->exactly(3))
-            ->method('getKeyFile')
-            ->willReturnOnConsecutiveCalls('file', 'file', null)
+            ->willReturn(array($this->host, $this->host))
         ;
         $this
             ->host
