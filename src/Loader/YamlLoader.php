@@ -410,6 +410,14 @@ class YamlLoader
                     case 'host_filter':
                         $task->setHostFilter($taskNode[$key]);
                         break;
+                    case 'max_runtime':
+                        $task->setMaxRuntime($taskNode[$key]);
+                        break;
+                    case 'sudo':
+                        if (is_bool($taskNode[$key])) {
+                            $task->setElevatePrivileges($taskNode[$key]);
+                        }
+                        break;
                     case 'trigger':
                         // TODO: Support array of triggers
                         $task->addTrigger($taskNode[$key]);

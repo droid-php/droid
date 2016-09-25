@@ -5,12 +5,15 @@ namespace Droid;
 use RuntimeException;
 
 use Droid\Model\Inventory\Inventory;
+use Droid\Model\Inventory\Remote\Check\PhpVersionCheck;
+use Droid\Model\Inventory\Remote\Check\WorkingDirectoryCheck;
 use Droid\Model\Inventory\Remote\Enabler;
 use Droid\Model\Inventory\Remote\SynchroniserComposer;
 use Droid\Model\Inventory\Remote\SynchroniserPhar;
 use Droid\Model\Project\Project;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -18,6 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Command\TargetRunCommand;
 use Droid\Loader\YamlLoader;
+use Droid\Logger\LoggerFactory;
 use Droid\Transform\DataStreamTransformer;
 use Droid\Transform\FileTransformer;
 use Droid\Transform\InventoryTransformer;
@@ -99,7 +103,21 @@ class Application extends ConsoleApplication
             exit(1);
         }
 
+        $this->configureOutput($output);
+
         return parent::run($input, $output);
+    }
+
+    private function configureOutput(OutputInterface $output)
+    {
+        $formatter = $output->getFormatter();
+        if (!$formatter) {
+            return;
+        }
+        $formatter->setStyle(
+            'host',
+            new OutputFormatterStyle('black', 'blue', array('reverse'))
+        );
     }
 
     protected function formatErrorMessages($messages)
@@ -183,23 +201,16 @@ class Application extends ConsoleApplication
         }
 
         if ($this->hasProject()) {
-            $runner = new TaskRunner($this, $this->transformer);
-            $localComposerFiles = null;
-            $localDroidBinary = null;
-            try {
-                $localComposerFiles = $this->locateLocalComposerFiles();
-                $runner->setEnabler(
-                    new Enabler(new SynchroniserComposer($localComposerFiles))
-                );
-            } catch (RuntimeException $eComposer) {
-                try {
-                    $localDroidBinary = $this->locateLocalDroidBinary();
-                    $runner->setEnabler(
-                        new Enabler(new SynchroniserPhar($localDroidBinary))
-                    );
-                } catch (RuntimeException $ePhar) {
-                    # No Op
-                }
+            $runner = new TaskRunner(
+                $this,
+                $this->transformer,
+                new LoggerFactory
+            );
+            $enabler = $this->configureHostEnabler();
+            if (! $enabler) {
+                # TODO output a warning about not being able to run remote cmds
+            } else {
+                $runner->setEnabler($enabler);
             }
             foreach ($this->getProject()->getTargets() as $target) {
                 $command = new TargetRunCommand;
@@ -210,6 +221,40 @@ class Application extends ConsoleApplication
                 $this->add($command);
             }
         }
+    }
+
+    protected function configureHostEnabler()
+    {
+        $localComposerFiles = null;
+        $localDroidBinary = null;
+        try {
+            $localComposerFiles = $this->locateLocalComposerFiles();
+        } catch (RuntimeException $eComposer) {
+            try {
+                $localDroidBinary = $this->locateLocalDroidBinary();
+            } catch (RuntimeException $ePhar) {
+                # No Op
+            }
+        }
+        if (! ($localComposerFiles || $localDroidBinary)) {
+            return;
+        }
+
+        $enabler = $localComposerFiles
+            ? new Enabler(new SynchroniserComposer($localComposerFiles))
+            : new Enabler(new SynchroniserPhar($localDroidBinary))
+        ;
+
+        $phpCheck = new PhpVersionCheck;
+        $phpCheck->configure(array('min_php_version' => 50509));
+
+        $dirCheck = new WorkingDirectoryCheck;
+        $dirCheck->configure(array('working_dir_path' => '/usr/local/droid'));
+
+        return $enabler
+            ->addHostCheck($phpCheck)
+            ->addHostCheck($dirCheck)
+        ;
     }
 
     protected function locateLocalDroidBinary()

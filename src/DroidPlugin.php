@@ -18,6 +18,7 @@ class DroidPlugin
         $commands[] = new \Droid\Command\GeneratePluginCommand();
         $commands[] = new \Droid\Command\InventoryCommand();
         $commands[] = new \Droid\Command\ModuleInstallCommand();
+        $commands[] = new \Droid\Command\PingCommand;
         return $commands;
     }
 }

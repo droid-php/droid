@@ -16,22 +16,27 @@ use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\ExpressionLanguage\SyntaxError;
 use Symfony\Component\Process\Process;
 
+use Droid\Logger\LoggerFactory;
 use Droid\Transform\Transformer;
 
 class TaskRunner
 {
     private $output;
     private $app;
+    private $enabler;
     private $connections = [];
     private $expr;
+    private $loggerFac;
     private $transformer;
 
     public function __construct(
         Application $app,
         Transformer $transformer,
+        LoggerFactory $loggerFactory,
         ExpressionLanguage $expr = null
     ) {
         $this->app = $app;
+        $this->loggerFac = $loggerFactory;
         $this->transformer = $transformer;
         if (! $expr) {
             $this->expr = new ExpressionLanguage;
@@ -49,6 +54,9 @@ class TaskRunner
     public function setOutput(OutputInterface $output)
     {
         $this->output = $output;
+
+        $this->enabler->setLogger($this->loggerFac->makeLogger($output));
+
         return $this;
     }
 
@@ -78,7 +86,7 @@ class TaskRunner
             $commandInput = array();
             foreach ($taskHosts as $host) {
                 $perHostVars = array_merge($variables, array('host' => $host));
-                // Allow host-level variables to override project, module and target variables 
+                // Allow host-level variables to override project, module and target variables
                 $perHostVars = array_merge($perHostVars, $host->getVariables());
                 $commandInput[$host->name] = $this
                     ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
@@ -209,7 +217,7 @@ class TaskRunner
 
     public function taskOutput(Task $task, $type, $buf, $hostname)
     {
-        $fmt = '<fg=black;bg=blue;options=reverse>' . $hostname . '</> %s';
+        $fmt = '<host>' . $hostname . '</> %s';
         if ($type === Process::ERR) {
             $fmt = '<error>' . $hostname . '</error> %s';
         }
@@ -234,17 +242,23 @@ class TaskRunner
 
     public function runLocalCommand(Task $task, Command $command, ArrayInput $commandInput)
     {
-        //$commandInput->setArgument('command', $command->getName());
-        //$res = $command->run($commandInput, $this->output);
-
-        $argv = $_SERVER['argv'];
-        $filename = $argv[0];
-        $process = new Process($filename . ' ' . $command->getName() . ' ' . (string)$commandInput . ' --ansi');
+        $process = new Process(
+            sprintf(
+                '%s%s %s %s --ansi',
+                $task->getElevatePrivileges() ? 'sudo ' : '',
+                $_SERVER['argv'][0],
+                $command->getName(),
+                (string) $commandInput
+            )
+        );
         if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
             $this->output->writeLn("Full command-line: " . $process->getCommandLine());
         }
 
-        $process->start();
+        $process
+            ->setTimeout($task->getMaxRuntime())
+            ->start()
+        ;
         $output = $this->output;
         $runner = $this;
         $process->wait(function ($type, $buf) use ($runner, $task, $output) {
@@ -307,10 +321,13 @@ class TaskRunner
                 $runner->taskOutput($task, $type, $buf, $host->getName());
             };
 
-
             $cmd = array(
                 sprintf('cd %s;', $host->getWorkingDirectory()),
-                $host->getDroidCommandPrefix(),
+                sprintf(
+                    '%s%s',
+                    $task->getElevatePrivileges() ? 'sudo ' : '',
+                    $host->getDroidCommandPrefix()
+                ),
                 $command->getName(),
                 (string) $commandInput[$host->getName()],
                 '--ansi'
@@ -324,9 +341,19 @@ class TaskRunner
                 );
             }
 
+            $max_runtime = null;
+            $unlimited_runtime = false;
+            if ($task->getMaxRuntime() === 0) {
+                $unlimited_runtime = true;
+            } else if ($task->getMaxRuntime()) {
+                $max_runtime = $task->getMaxRuntime();
+            }
+
             $ssh->startExec(
                 $cmd,
-                $outputter
+                $outputter,
+                $max_runtime,
+                $unlimited_runtime
             );
             $running[] = array($host, $ssh);
         }
@@ -462,8 +489,8 @@ class TaskRunner
                         'Unable to parse Task with_items_filter expression "%s"',
                         $task->getItemFilter()
                     ),
-                null,
-                $e
+                    null,
+                    $e
                 );
             }
         }

@@ -2,13 +2,15 @@
 
 namespace Droid\Test\TaskRunner;
 
-use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\Enabler;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Application;
+use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Transform\Transformer;
 
@@ -19,6 +21,8 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
     private $app;
     private $command;
     private $enabler;
+    private $logger;
+    private $loggerFac;
     private $output;
     private $taskRunner;
     private $transformer;
@@ -28,7 +32,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         $this->app = new Application($this->autoloader);
         $this->command = $this->getMockCommand();
         $this->enabler = $this
-            ->getMockBuilder(EnablerInterface::class)
+            ->getMockBuilder(Enabler::class)
             ->disableOriginalConstructor()
             ->getMock()
         ;
@@ -41,14 +45,28 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
             ->disableOriginalConstructor()
             ->getMock()
         ;
+        $this->logger = $this
+            ->getMockBuilder(LoggerInterface::class)
+            ->getMock()
+        ;
+        $this->loggerFac = $this
+            ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this
+            ->loggerFac
+            ->method('makeLogger')
+            ->willReturn($this->logger)
+        ;
         $this->taskRunner = new TaskRunner(
             $this->app,
-            $this->transformer
+            $this->transformer,
+            $this->loggerFac
         );
         $this
             ->taskRunner
-            ->setOutput($this->output)
             ->setEnabler($this->enabler)
+            ->setOutput($this->output)
         ;
     }
 

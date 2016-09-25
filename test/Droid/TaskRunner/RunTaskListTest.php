@@ -6,12 +6,14 @@ use RuntimeException;
 
 use Droid\Model\Inventory\Host;
 use Droid\Model\Inventory\Inventory;
-use Droid\Model\Inventory\Remote\EnablerInterface;
+use Droid\Model\Inventory\Remote\Enabler;
 use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Application;
+use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
 use Droid\Transform\Transformer;
@@ -22,6 +24,8 @@ class RunTaskListTest extends AutoloaderAwareTestCase
     private $enabler;
     private $host;
     private $inventory;
+    private $logger;
+    private $loggerFac;
     private $output;
     private $target;
     private $task;
@@ -37,7 +41,7 @@ class RunTaskListTest extends AutoloaderAwareTestCase
             ->getMock()
         ;
         $this->enabler = $this
-            ->getMockBuilder(EnablerInterface::class)
+            ->getMockBuilder(Enabler::class)
             ->disableOriginalConstructor()
             ->getMock()
         ;
@@ -49,6 +53,19 @@ class RunTaskListTest extends AutoloaderAwareTestCase
         $this->inventory = $this
             ->getMockBuilder(Inventory::class)
             ->getMock()
+        ;
+        $this->logger = $this
+            ->getMockBuilder(LoggerInterface::class)
+            ->getMock()
+        ;
+        $this->loggerFac = $this
+            ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this
+            ->loggerFac
+            ->method('makeLogger')
+            ->willReturn($this->logger)
         ;
         $this->output = $this
             ->getMockBuilder(OutputInterface::class)
@@ -71,12 +88,12 @@ class RunTaskListTest extends AutoloaderAwareTestCase
         $this->taskRunner = $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer)
+                array($this->app, $this->transformer, $this->loggerFac)
             )
             ->setMethods(array('runTaskRemotely', 'runTaskLocally'))
             ->getMock()
-            ->setOutput($this->output)
             ->setEnabler($this->enabler)
+            ->setOutput($this->output)
         ;
     }
 
