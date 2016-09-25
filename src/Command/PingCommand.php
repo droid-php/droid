@@ -61,25 +61,9 @@ class PingCommand extends Command
     {
         $hosts = array();
         if ($input->getArgument('hostname')) {
-            $h = $this->getInventory()->getHost($input->getArgument('hostname'));
-            if (! $h->getKeyFile()) {
-                throw new RuntimeException(
-                    sprintf(
-                        'I cannot ping the host named "%s": there is no "keyfile" (SSH IdentityFile) configured with which to authenticate the "%s" user.',
-                        $h->getName(),
-                        $h->getUsername()
-                    )
-                );
-            }
-            $hosts[] = $h;
+            $hosts[] = $this->getInventory()->getHost($input->getArgument('hostname'));
         } else {
-            # simply ignore hosts without a keyfile
-            $hosts = array_filter(
-                $this->getInventory()->getHosts(),
-                function ($x) {
-                    return $x->getKeyFile() !== null;
-                }
-            );
+            $hosts = $this->getInventory()->getHosts();
         }
 
         $output->writeln(
