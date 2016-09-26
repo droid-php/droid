@@ -97,7 +97,7 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
         $this
             ->inventory
             ->expects($this->once())
-            ->method('getHost')
+            ->method('getHostsByName')
             ->with($this->equalTo('some-host-name'))
             ->willThrowException(new RuntimeException)
         ;
@@ -120,7 +120,7 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
         ;
         $this
             ->inventory
-            ->method('getHost')
+            ->method('getHostsByName')
             ->willReturn($this->host)
         ;
         $this
@@ -186,7 +186,7 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
         ;
         $this
             ->inventory
-            ->method('getHost')
+            ->method('getHostsByName')
             ->willReturn($this->host)
         ;
         $this
