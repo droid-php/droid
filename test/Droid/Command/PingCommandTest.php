@@ -139,7 +139,12 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
             ->ssh
             ->expects($this->once())
             ->method('exec')
-            ->with($this->equalTo(array('/bin/true')))
+            ->with(
+                $this->identicalTo(array('/bin/true')),
+                $this->identicalTo(null),
+                $this->identicalTo(null),
+                $this->identicalTo(true)
+            )
         ;
         $this
             ->ssh
@@ -205,7 +210,12 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
             ->ssh
             ->expects($this->once())
             ->method('exec')
-            ->with($this->equalTo(array('/bin/true')))
+            ->with(
+                $this->identicalTo(array('/bin/true')),
+                $this->identicalTo(null),
+                $this->identicalTo(null),
+                $this->identicalTo(true)
+            )
         ;
         $this
             ->ssh
@@ -278,7 +288,12 @@ class PingCommandTest extends PHPUnit_Framework_TestCase
             ->ssh
             ->expects($this->exactly(2))
             ->method('exec')
-            ->with($this->equalTo(array('/bin/true')))
+            ->with(
+                $this->identicalTo(array('/bin/true')),
+                $this->identicalTo(null),
+                $this->identicalTo(null),
+                $this->identicalTo(true)
+            )
         ;
         $this->tester->execute(array(
             'command' => $this->command->getName(),

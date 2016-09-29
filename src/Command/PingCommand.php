@@ -78,7 +78,7 @@ class PingCommand extends Command
             $output->writeln(
                 sprintf('<host>%s</> Ping.', $host->getName())
             );
-            $ssh->exec(array('/bin/true'));
+            $ssh->exec(array('/bin/true'), null, null, true);
             if ($ssh->getExitCode()) {
                 $output->writeln(
                     sprintf(
