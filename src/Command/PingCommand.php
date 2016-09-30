@@ -36,16 +36,15 @@ class PingCommand extends Command
         $this
             ->setName('ping')
             ->setDescription(
-                'Connect to SSH on the specified host, or all hosts in the Inventory.'
+                'Ping the specified hosts, or all hosts in the Inventory.'
             )
             ->addArgument(
                 'hostname',
                 InputArgument::OPTIONAL,
-                'The name of a host to ping'
+                'The name of a host or host group to ping'
             )
             ->setHelp(implode("\n", array(
-                'Connects to and immediately disconnect from the SSH service on a specified Inventory host or all Inventory hosts.',
-                'An SSH connection is attempted only to Inventory hosts having a "keyfile" configured in their entry in the Inventory.'
+                'Connects to and immediately disconnect from the SSH service on a specified Inventory hosts or all Inventory hosts.'
             )))
         ;
     }
@@ -61,7 +60,7 @@ class PingCommand extends Command
     {
         $hosts = array();
         if ($input->getArgument('hostname')) {
-            $hosts[] = $this->getInventory()->getHost($input->getArgument('hostname'));
+            $hosts[] = $this->getInventory()->getHostsByName($input->getArgument('hostname'));
         } else {
             $hosts = $this->getInventory()->getHosts();
         }
@@ -79,7 +78,7 @@ class PingCommand extends Command
             $output->writeln(
                 sprintf('<host>%s</> Ping.', $host->getName())
             );
-            $ssh->exec(array('/bin/true'));
+            $ssh->exec(array('/bin/true'), null, null, true);
             if ($ssh->getExitCode()) {
                 $output->writeln(
                     sprintf(
