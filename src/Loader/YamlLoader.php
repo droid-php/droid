@@ -279,6 +279,9 @@ class YamlLoader
                     case 'auth':
                         $host->setAuth($value);
                         break;
+                    case 'firewall_policy':
+                        $host->setFirewallPolicy($value);
+                        break;
                     case 'keyfile':
                         $host->setKeyFile(Utils::absoluteFilename($value));
                         break;
@@ -341,6 +344,10 @@ class YamlLoader
         foreach ($groups as $groupName => $groupNode) {
             $group = new HostGroup($groupName);
             $this->loadRules($group, $groupNode);
+
+            if (isset($groupNode['firewall_policy'])) {
+                $group->setFirewallPolicy($groupNode['firewall_policy']);
+            }
 
             if (isset($groupNode['hosts'])) {
                 foreach ($groupNode['hosts'] as $hostName) {
