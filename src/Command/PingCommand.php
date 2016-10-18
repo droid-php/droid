@@ -58,9 +58,9 @@ class PingCommand extends Command
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $hosts = array();
+        $hosts = null;
         if ($input->getArgument('hostname')) {
-            $hosts[] = $this->getInventory()->getHostsByName($input->getArgument('hostname'));
+            $hosts = $this->getInventory()->getHostsByName($input->getArgument('hostname'));
         } else {
             $hosts = $this->getInventory()->getHosts();
         }
