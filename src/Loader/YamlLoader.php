@@ -108,6 +108,13 @@ class YamlLoader
 
     private function loadProject(Project $project, $data)
     {
+        if (array_key_exists('name', $data) && is_string($data['name'])) {
+            $project->name = $data['name'];
+        }
+        if (array_key_exists('description', $data) && is_string($data['description'])) {
+            $project->description = $data['description'];
+        }
+
         $this->loadVariables($data, $project);
 
         if (isset($data['register'])) {

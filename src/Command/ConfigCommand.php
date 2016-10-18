@@ -27,7 +27,13 @@ class ConfigCommand extends Command
         }
 
         $header = 'Droid configuration:';
+        if ($project->name) {
+            $header .= sprintf(' "%s"', $project->name);
+        }
         $output->writeln($header);
+        if ($project->description) {
+            $output->writeln($project->description);
+        }
 
         if ($project->getModules()) {
             $output->writeln("Modules: ");
