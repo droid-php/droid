@@ -91,9 +91,6 @@ class InventoryTransformer implements TransformerInterface
         if ($this->inventory->hasHostGroup($expression)) {
             return $this->inventory->getHostGroup($expression);
         }
-        if ($this->inventory->hasVariable($expression)) {
-            return $this->inventory->getVariable($expression);
-        }
         return false;
     }
 }
