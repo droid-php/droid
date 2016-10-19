@@ -12,7 +12,6 @@ use Droid\Model\Inventory\Inventory;
 use Droid\Model\Project\Environment;
 use Droid\Model\Project\Module;
 use Droid\Model\Project\Project;
-use Droid\Model\Project\RegisteredCommand;
 use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -136,15 +135,6 @@ class YamlLoader
         }
 
         $this->loadVariables($data, $project);
-
-        if (isset($data['register'])) {
-            foreach ($data['register'] as $registerNode) {
-                foreach ($registerNode as $className => $parameters) {
-                    $command = new RegisteredCommand($className, $parameters);
-                    $project->addRegisteredCommand($command);
-                }
-            }
-        }
 
         if (isset($data['modules'])) {
             foreach ($data['modules'] as $name => $source) {

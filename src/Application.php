@@ -170,18 +170,6 @@ class Application extends ConsoleApplication
         // which is used when using the --help option
         $defaultCommands = parent::getDefaultCommands();
 
-        if ($this->hasProject()) {
-            // Register commands defined in project's droid.yml
-            foreach ($this->getProject()->getRegisteredCommands() as $registeredCommand) {
-                $className = $registeredCommand->getClassName();
-                $command = new $className();
-                if ($registeredCommand->hasProperty('name')) {
-                    $command->setName($registeredCommand->getProperty('name'));
-                }
-                $this->add($command);
-            }
-        }
-
         // Automatically register commands by scanning namespaces for a 'DroidPlugin' class.
         //print_r($this->autoLoader);
         $prefixes = $this->autoLoader->getPrefixesPsr4();
