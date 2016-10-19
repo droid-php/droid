@@ -9,6 +9,7 @@ use Droid\Model\Feature\Firewall\Rule;
 use Droid\Model\Inventory\Host;
 use Droid\Model\Inventory\HostGroup;
 use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Environment;
 use Droid\Model\Project\Module;
 use Droid\Model\Project\Project;
 use Droid\Model\Project\RegisteredCommand;
@@ -39,9 +40,13 @@ class YamlLoader
         $this->transformer = $transformer;
     }
 
-    public function load(Project $project, Inventory $inventory)
-    {
+    public function load(
+        Project $project,
+        Inventory $inventory,
+        Environment $environment
+    ) {
         $data = $this->loadYaml($project->getConfigFilePath());
+        $this->loadEnvironment($environment, $data);
         $this->loadInventory($inventory, $data);
         $this->loadProject($project, $data);
     }
@@ -104,6 +109,21 @@ class YamlLoader
         }
         return $data;
 
+    }
+
+    private function loadEnvironment(Environment $environment, $data)
+    {
+        if (! array_key_exists('environment', $data)
+            || ! is_array($data['environment'])
+        ) {
+            return;
+        }
+
+        foreach ($data['environment'] as $k => $v) {
+            if (property_exists(Environment::class, $k)) {
+                $environment->$k = $v;
+            }
+        }
     }
 
     private function loadProject(Project $project, $data)
@@ -249,26 +269,25 @@ class YamlLoader
         foreach ($hosts as $hostName => $hostData) {
             $host = new Host($hostName);
             $this->loadRules($host, $hostData);
-            $inventory->addHost($host);
-            if (!$hostData) {
-                continue;
-            }
             foreach ($hostData as $key => $value) {
                 switch ($key) {
                     case 'variables':
                         $this->loadVariables($hostData, $host);
+                        break;
+                    case 'droid_ip':
+                        $host->droid_ip = $value;
+                        break;
+                    case 'droid_port':
+                        if (! is_numeric($value)) {
+                            throw new RuntimeException('Expected numeric droid_port.');
+                        }
+                        $host->droid_port = (int) $value;
                         break;
                     case 'public_ip':
                         $host->public_ip = $value;
                         break;
                     case 'private_ip':
                         $host->private_ip = $value;
-                        break;
-                    case 'public_port':
-                        $host->public_port = $value;
-                        break;
-                    case 'private_port':
-                        $host->private_port = $value;
                         break;
                     case 'username':
                         $host->setUsername($value);
@@ -304,6 +323,7 @@ class YamlLoader
                         throw new RuntimeException("Unknown host property: " . $key);
                 }
             }
+            $inventory->addHost($host);
         }
         foreach ($want_gateway as $want => $gateway) {
             if (! $inventory->hasHost($gateway)) {
@@ -333,7 +353,7 @@ class YamlLoader
         }
         if ($incompleteHosts) {
             $this->errors[] = sprintf(
-                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (public_ip): %s.',
+                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (droid_ip or public_ip): %s.',
                 implode(', ', $incompleteHosts)
             );
         }
