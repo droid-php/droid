@@ -57,6 +57,9 @@ class InventoryCommand extends Command
             }
 
             foreach ($host->variables as $name => $value) {
+                if (is_array($value)) {
+                    $value = '{...}';
+                }
                 $output->writeln("      - $name=`$value`");
             }
         }
@@ -71,6 +74,9 @@ class InventoryCommand extends Command
             $output->writeln(trim($hostnames, ' ,'));
 
             foreach ($group->getVariables() as $name => $value) {
+                if (is_array($value)) {
+                    $value = '{...}';
+                }
                 $output->writeln("    - $name=`$value`");
             }
         }
