@@ -202,7 +202,9 @@ class YamlLoader
         $filename = $path . '/droid.yml';
         $data = $this->loadYaml($filename);
         $module->setBasePath($path);
-        $module->setDescription($data['project']['description']);
+        if (array_key_exists('description', $data) && is_string($data['description'])) {
+            $module->setDescription($data['description']);
+        }
         $this->loadVariables($data, $module);
         $this->loadTasks($data, $module, 'tasks');
         $this->loadTasks($data, $module, 'triggers');
