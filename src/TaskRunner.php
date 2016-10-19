@@ -85,9 +85,10 @@ class TaskRunner
             );
             $commandInput = array();
             foreach ($taskHosts as $host) {
-                $perHostVars = array_merge($variables, array('host' => $host));
-                // Allow host-level variables to override project, module and target variables
-                $perHostVars = array_merge($perHostVars, $host->getVariables());
+                $perHostVars = $variables;
+                // Allow host variables to override target, project and module variables
+                $perHostVars = array_replace_recursive($perHostVars, $host->variables);
+                $perHostVars = array_merge($perHostVars, array('host' => $host));
                 $commandInput[$host->name] = $this
                     ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
                 ;
@@ -183,12 +184,12 @@ class TaskRunner
         }
 
         foreach ($target->getModules() as $module) {
-            $variables = array_merge($module->variables, $project->variables, $target->variables);
+            $variables = array_replace_recursive($module->variables, $project->variables, $target->variables);
             $variables['mod_path'] = $module->getBasePath();
             $this->runTaskList($module, $variables, $target->getHosts());
         }
 
-        $variables = array_merge($project->variables, $target->variables);
+        $variables = array_replace_recursive($project->variables, $target->variables);
         $this->runTaskList($target, $variables, $target->getHosts());
         return 0;
     }
