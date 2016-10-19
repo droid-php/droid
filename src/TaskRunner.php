@@ -86,7 +86,11 @@ class TaskRunner
             $commandInput = array();
             foreach ($taskHosts as $host) {
                 $perHostVars = $variables;
-                // Allow host variables to override target, project and module variables
+                // Allow group variables to override target, project and module variables
+                foreach ($this->app->getInventory()->getHostGroupsByHost($host) as $group) {
+                    $perHostVars = array_replace_recursive($perHostVars, $group->variables);
+                }
+                // Allow host variables to override group, target, project and module variables
                 $perHostVars = array_replace_recursive($perHostVars, $host->variables);
                 $perHostVars = array_merge($perHostVars, array('host' => $host));
                 $commandInput[$host->name] = $this

@@ -286,6 +286,11 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
             ->willReturn($hosts)
         ;
         $this
+            ->inventory
+            ->method('getHostGroupsByHost')
+            ->willReturn(array())
+        ;
+        $this
             ->taskRunner
             ->expects($this->exactly(2))
             ->method('prepareCommandInput')
@@ -382,6 +387,11 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
             ->method('getHostsByName')
             ->with('my-hosts')
             ->willReturn($hosts)
+        ;
+        $this
+            ->inventory
+            ->method('getHostGroupsByHost')
+            ->willReturn(array())
         ;
         $this
             ->taskRunner
