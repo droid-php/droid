@@ -282,20 +282,11 @@ class YamlLoader
                     case 'username':
                         $host->setUsername($value);
                         break;
-                    case 'password':
-                        $host->setPassword($value);
-                        break;
-                    case 'auth':
-                        $host->setAuth($value);
-                        break;
                     case 'firewall_policy':
                         $host->setFirewallPolicy($value);
                         break;
                     case 'keyfile':
                         $host->setKeyFile(Utils::absoluteFilename($value));
-                        break;
-                    case 'keypass':
-                        $host->setKeyPass($value);
                         break;
                     case 'ssh_options':
                         $host->setSshOptions($value);
