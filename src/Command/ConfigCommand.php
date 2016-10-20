@@ -21,23 +21,35 @@ class ConfigCommand extends Command
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-
-        $output->writeln("Droid configuration:");
         $project = $this->getApplication()->getProject();
+        if (! $project) {
+            return;
+        }
 
-        $output->writeln("Modules: ");
+        $header = 'Droid configuration:';
+        if ($project->name) {
+            $header .= sprintf(' "%s"', $project->name);
+        }
+        $output->writeln($header);
+        if ($project->description) {
+            $output->writeln($project->description);
+        }
+
+        if ($project->getModules()) {
+            $output->writeln("Modules: ");
+        }
         foreach ($project->getModules() as $module) {
             $output->writeln("<info>Module: " . $module->getName() . "</info> " . $module->getSource());
             $output->writeLn("     Description: " . $module->getDescription());
             $output->writeln("     Variables: " . $module->getVariablesAsString());
         }
-        
+
         foreach ($project->getTargets() as $target) {
             $output->writeln("<info>Target: " . $target->getName() . "</info>");
             if ($target->getHosts()) {
                 $output->writeln("     Hosts: " . $target->getHosts());
             }
-            
+
             $output->writeln("     Variables: " . $target->getVariablesAsString());
             foreach ($target->getModules() as $module) {
                 $output->writeln("    <comment> Module: <info>" . $module->getName() . "</info></comment>");
@@ -56,6 +68,6 @@ class ConfigCommand extends Command
                 }
             }
         }
-        $output->writeln("Done: ");
+        $output->writeln("Done.");
     }
 }

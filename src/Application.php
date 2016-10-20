@@ -10,6 +10,7 @@ use Droid\Model\Inventory\Remote\Check\WorkingDirectoryCheck;
 use Droid\Model\Inventory\Remote\Enabler;
 use Droid\Model\Inventory\Remote\SynchroniserComposer;
 use Droid\Model\Inventory\Remote\SynchroniserPhar;
+use Droid\Model\Project\Environment;
 use Droid\Model\Project\Project;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Console\Application as ConsoleApplication;
@@ -51,6 +52,8 @@ class Application extends ConsoleApplication
         $this->setVersion('1.0.0');
 
         $this->inventory = new Inventory();
+        $environment = new Environment;
+        $this->inventory->setEnvironment($environment);
         $this->transformer = $this->buildTransformer();
 
         $loader = new YamlLoader($this->basePath, $this->transformer);
@@ -76,7 +79,7 @@ class Application extends ConsoleApplication
         $this->project = new Project($filename);
 
         // Load droid.yml
-        $loader->load($this->project, $this->inventory);
+        $loader->load($this->project, $this->inventory, $environment);
 
         $this->loaderErrors = $loader->errors;
         if ($this->loaderErrors) {
@@ -166,18 +169,6 @@ class Application extends ConsoleApplication
         // Keep the core default commands to have the HelpCommand
         // which is used when using the --help option
         $defaultCommands = parent::getDefaultCommands();
-
-        if ($this->hasProject()) {
-            // Register commands defined in project's droid.yml
-            foreach ($this->getProject()->getRegisteredCommands() as $registeredCommand) {
-                $className = $registeredCommand->getClassName();
-                $command = new $className();
-                if ($registeredCommand->hasProperty('name')) {
-                    $command->setName($registeredCommand->getProperty('name'));
-                }
-                $this->add($command);
-            }
-        }
 
         // Automatically register commands by scanning namespaces for a 'DroidPlugin' class.
         //print_r($this->autoLoader);

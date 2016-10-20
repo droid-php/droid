@@ -25,20 +25,41 @@ class InventoryCommand extends Command
         $output->writeln("Droid inventory:");
         $inventory = $this->getApplication()->getInventory();
 
-        foreach ($inventory->getVariables() as $name => $value) {
-            $output->writeln("- $name=`$value`");
-        }
-        
         $output->writeln("HOSTS");
         foreach ($inventory->getHosts() as $host) {
             $output->writeln('   <comment>'. $host->getName() . "</comment>");
-            $output->writeln("      Public: " . $host->getPublicIp() . ':' . $host->getPublicPort());
-            if ($host->getPrivateIp()) {
-                $output->writeln("      Private: " . $host->getPrivateIp() . ':' . $host->getPrivatePort());
+            if ($host->droid_ip) {
+                $output->writeln(
+                    sprintf(
+                        '      Droid socket: %s:%d',
+                        $host->droid_ip,
+                        $host->getConnectionPort()
+                    )
+                );
             }
-            
-            $output->writeln("      Auth: " . $host->getAuth());
-            foreach ($host->getVariables() as $name => $value) {
+            if ($host->public_ip) {
+                $output->writeln(
+                    sprintf(
+                        '      Public: %s:%d',
+                        $host->public_ip,
+                        $host->getConnectionPort()
+                    )
+                );
+            }
+            if ($host->private_ip) {
+                $output->writeln(
+                    sprintf(
+                        '      Private: %s:%d',
+                        $host->private_ip,
+                        $host->getConnectionPort()
+                    )
+                );
+            }
+
+            foreach ($host->variables as $name => $value) {
+                if (is_array($value)) {
+                    $value = '{...}';
+                }
                 $output->writeln("      - $name=`$value`");
             }
         }
@@ -53,6 +74,9 @@ class InventoryCommand extends Command
             $output->writeln(trim($hostnames, ' ,'));
 
             foreach ($group->getVariables() as $name => $value) {
+                if (is_array($value)) {
+                    $value = '{...}';
+                }
                 $output->writeln("    - $name=`$value`");
             }
         }

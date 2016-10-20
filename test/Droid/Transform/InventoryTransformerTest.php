@@ -79,12 +79,6 @@ class InventoryTransformerTest extends \PHPUnit_Framework_TestCase
             ->method('hasHostGroup')
             ->willReturn(false)
         ;
-        $this
-            ->inventory
-            ->expects($this->once())
-            ->method('hasVariable')
-            ->willReturn(false)
-        ;
         $this->transformer->transform('%missing.name%');
     }
 
@@ -166,39 +160,6 @@ class InventoryTransformerTest extends \PHPUnit_Framework_TestCase
             ->inventory
             ->expects($this->once())
             ->method('getHostGroup')
-            ->with('thing')
-            ->willReturn($thing)
-        ;
-        $this
-            ->accessor
-            ->expects($this->once())
-            ->method('isReadable')
-            ->with($thing, 'name')
-            ->willReturn(true)
-        ;
-        $this
-            ->accessor
-            ->expects($this->once())
-            ->method('getValue')
-            ->with($thing, 'name')
-        ;
-        $this->transformer->transform('%thing.name%');
-    }
-
-    public function testTransformInvokesAccessorWithInventoryVariable()
-    {
-        $thing = new stdClass;
-
-        $this
-            ->inventory
-            ->expects($this->once())
-            ->method('hasVariable')
-            ->willReturn(true)
-        ;
-        $this
-            ->inventory
-            ->expects($this->once())
-            ->method('getVariable')
             ->with('thing')
             ->willReturn($thing)
         ;

@@ -9,9 +9,9 @@ use Droid\Model\Feature\Firewall\Rule;
 use Droid\Model\Inventory\Host;
 use Droid\Model\Inventory\HostGroup;
 use Droid\Model\Inventory\Inventory;
+use Droid\Model\Project\Environment;
 use Droid\Model\Project\Module;
 use Droid\Model\Project\Project;
-use Droid\Model\Project\RegisteredCommand;
 use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -39,9 +39,13 @@ class YamlLoader
         $this->transformer = $transformer;
     }
 
-    public function load(Project $project, Inventory $inventory)
-    {
+    public function load(
+        Project $project,
+        Inventory $inventory,
+        Environment $environment
+    ) {
         $data = $this->loadYaml($project->getConfigFilePath());
+        $this->loadEnvironment($environment, $data);
         $this->loadInventory($inventory, $data);
         $this->loadProject($project, $data);
     }
@@ -106,18 +110,31 @@ class YamlLoader
 
     }
 
-    private function loadProject(Project $project, $data)
+    private function loadEnvironment(Environment $environment, $data)
     {
-        $this->loadVariables($data, $project);
+        if (! array_key_exists('environment', $data)
+            || ! is_array($data['environment'])
+        ) {
+            return;
+        }
 
-        if (isset($data['register'])) {
-            foreach ($data['register'] as $registerNode) {
-                foreach ($registerNode as $className => $parameters) {
-                    $command = new RegisteredCommand($className, $parameters);
-                    $project->addRegisteredCommand($command);
-                }
+        foreach ($data['environment'] as $k => $v) {
+            if (property_exists(Environment::class, $k)) {
+                $environment->$k = $v;
             }
         }
+    }
+
+    private function loadProject(Project $project, $data)
+    {
+        if (array_key_exists('name', $data) && is_string($data['name'])) {
+            $project->name = $data['name'];
+        }
+        if (array_key_exists('description', $data) && is_string($data['description'])) {
+            $project->description = $data['description'];
+        }
+
+        $this->loadVariables($data, $project);
 
         if (isset($data['modules'])) {
             foreach ($data['modules'] as $name => $source) {
@@ -185,7 +202,9 @@ class YamlLoader
         $filename = $path . '/droid.yml';
         $data = $this->loadYaml($filename);
         $module->setBasePath($path);
-        $module->setDescription($data['project']['description']);
+        if (array_key_exists('description', $data) && is_string($data['description'])) {
+            $module->setDescription($data['description']);
+        }
         $this->loadVariables($data, $module);
         $this->loadTasks($data, $module, 'tasks');
         $this->loadTasks($data, $module, 'triggers');
@@ -242,14 +261,19 @@ class YamlLoader
         foreach ($hosts as $hostName => $hostData) {
             $host = new Host($hostName);
             $this->loadRules($host, $hostData);
-            $inventory->addHost($host);
-            if (!$hostData) {
-                continue;
-            }
             foreach ($hostData as $key => $value) {
                 switch ($key) {
                     case 'variables':
                         $this->loadVariables($hostData, $host);
+                        break;
+                    case 'droid_ip':
+                        $host->droid_ip = $value;
+                        break;
+                    case 'droid_port':
+                        if (! is_numeric($value)) {
+                            throw new RuntimeException('Expected numeric droid_port.');
+                        }
+                        $host->droid_port = (int) $value;
                         break;
                     case 'public_ip':
                         $host->public_ip = $value;
@@ -257,26 +281,14 @@ class YamlLoader
                     case 'private_ip':
                         $host->private_ip = $value;
                         break;
-                    case 'public_port':
-                        $host->public_port = $value;
-                        break;
-                    case 'private_port':
-                        $host->private_port = $value;
-                        break;
                     case 'username':
                         $host->setUsername($value);
                         break;
-                    case 'password':
-                        $host->setPassword($value);
-                        break;
-                    case 'auth':
-                        $host->setAuth($value);
+                    case 'firewall_policy':
+                        $host->setFirewallPolicy($value);
                         break;
                     case 'keyfile':
                         $host->setKeyFile(Utils::absoluteFilename($value));
-                        break;
-                    case 'keypass':
-                        $host->setKeyPass($value);
                         break;
                     case 'ssh_options':
                         $host->setSshOptions($value);
@@ -294,6 +306,7 @@ class YamlLoader
                         throw new RuntimeException("Unknown host property: " . $key);
                 }
             }
+            $inventory->addHost($host);
         }
         foreach ($want_gateway as $want => $gateway) {
             if (! $inventory->hasHost($gateway)) {
@@ -323,7 +336,7 @@ class YamlLoader
         }
         if ($incompleteHosts) {
             $this->errors[] = sprintf(
-                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (public_ip): %s.',
+                'The following hosts fail to meet the minimum requirement that they exhibit an IP address (droid_ip or public_ip): %s.',
                 implode(', ', $incompleteHosts)
             );
         }
@@ -334,6 +347,10 @@ class YamlLoader
         foreach ($groups as $groupName => $groupNode) {
             $group = new HostGroup($groupName);
             $this->loadRules($group, $groupNode);
+
+            if (isset($groupNode['firewall_policy'])) {
+                $group->setFirewallPolicy($groupNode['firewall_policy']);
+            }
 
             if (isset($groupNode['hosts'])) {
                 foreach ($groupNode['hosts'] as $hostName) {
