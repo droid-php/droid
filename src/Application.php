@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Command\TargetRunCommand;
 use Droid\Loader\YamlLoader;
@@ -195,7 +196,8 @@ class Application extends ConsoleApplication
             $runner = new TaskRunner(
                 $this,
                 $this->transformer,
-                new LoggerFactory
+                new LoggerFactory,
+                new ExpressionLanguage
             );
             $enabler = $this->configureHostEnabler();
             if (! $enabler) {

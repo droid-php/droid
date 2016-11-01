@@ -12,6 +12,7 @@ use SSHClient\Client\ClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
@@ -24,6 +25,7 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
     private $app;
     private $synchroniser;
     private $enabler;
+    private $expr;
     private $logger;
     private $loggerFac;
     private $output;
@@ -57,6 +59,10 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         ;
         $this->loggerFac = $this
             ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this->expr = $this
+            ->getMockBuilder(ExpressionLanguage::class)
             ->getMock()
         ;
         $this
@@ -97,7 +103,8 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
         $this->taskRunner = new TaskRunner(
             $this->app,
             $this->transformer,
-            $this->loggerFac
+            $this->loggerFac,
+            $this->expr
         );
         $this
             ->taskRunner

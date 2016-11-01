@@ -33,16 +33,12 @@ class TaskRunner
         Application $app,
         Transformer $transformer,
         LoggerFactory $loggerFactory,
-        ExpressionLanguage $expr = null
+        ExpressionLanguage $expr
     ) {
         $this->app = $app;
         $this->loggerFac = $loggerFactory;
         $this->transformer = $transformer;
-        if (! $expr) {
-            $this->expr = new ExpressionLanguage;
-        } else {
-            $this->expr = $expr;
-        }
+        $this->expr = $expr;
     }
 
     public function setEnabler(EnablerInterface $enabler)
