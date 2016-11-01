@@ -68,7 +68,8 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
             $this->app,
             $this->transformer,
             $this->loggerFac,
-            $this->expr
+            $this->expr,
+            $this->transformer
         );
         $this
             ->taskRunner
@@ -110,7 +111,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         ;
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $argumentValue),
                 $variables
@@ -130,7 +131,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         ;
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $argumentValue),
                 $variables
@@ -177,7 +178,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
 
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $inputToMethod),
                 $variables
@@ -233,7 +234,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
 
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $inputToMethod),
                 $variables

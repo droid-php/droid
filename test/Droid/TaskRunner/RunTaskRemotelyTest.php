@@ -17,6 +17,7 @@ use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
 use Droid\Transform\Transformer;
+use Droid\Transform\SubstitutionTransformer;
 
 class RunTaskRemotelyTest extends AutoloaderAwareTestCase
 {
@@ -73,10 +74,20 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
             ->getMockBuilder(Task::class)
             ->getMock()
         ;
+        $this->substitutionTransformer = $this
+            ->getMockBuilder(SubstitutionTransformer::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+        ;
         $this->transformer = $this
             ->getMockBuilder(Transformer::class)
             ->disableOriginalConstructor()
             ->getMock()
+        ;
+        $this
+            ->transformer
+            ->method('getSubstitutionTransformer')
+            ->willReturn($this->substitutionTransformer)
         ;
         $this->taskRunner = $this->getPartialMockTaskRunner();
     }
@@ -101,7 +112,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer, $this->loggerFac, $this->expr)
+                array($this->app, $this->transformer, $this->loggerFac, $this->expr, $this->transformer)
             )
             ->setMethods(
                 array(

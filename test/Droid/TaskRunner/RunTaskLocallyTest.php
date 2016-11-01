@@ -110,7 +110,7 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer, $this->loggerFac, $this->expr)
+                array($this->app, $this->transformer, $this->loggerFac, $this->expr, $this->transformer)
             )
             ->setMethods(
                 array(

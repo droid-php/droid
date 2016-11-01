@@ -28,17 +28,20 @@ class TaskRunner
     private $expr;
     private $loggerFac;
     private $transformer;
+    private $legacyTransformer;
 
     public function __construct(
         Application $app,
         Transformer $transformer,
         LoggerFactory $loggerFactory,
-        ExpressionLanguage $expr
+        ExpressionLanguage $expr,
+        Transformer $legacyTransformer
     ) {
         $this->app = $app;
         $this->loggerFac = $loggerFactory;
         $this->transformer = $transformer;
         $this->expr = $expr;
+        $this->legacyTransformer = $legacyTransformer;
     }
 
     public function setEnabler(EnablerInterface $enabler)
@@ -89,9 +92,19 @@ class TaskRunner
                 // Allow host variables to override group, target, project and module variables
                 $perHostVars = array_replace_recursive($perHostVars, $host->variables);
                 $perHostVars = array_merge($perHostVars, array('host' => $host));
-                $commandInput[$host->name] = $this
-                    ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
-                ;
+
+                if (array_key_exists('use_legacy_templating', $perHostVars) &&
+                    $perHostVars['use_legacy_templating'] === true
+                ) {
+                    $commandInput[$host->name] = $this
+                        ->legacyPrepareCommandInput($command, $task->getArguments(), $perHostVars)
+                    ;
+                } else {
+                    $commandInput[$host->name] = $this
+                        ->prepareCommandInput($command, $task->getArguments(), $perHostVars)
+                    ;
+                }
+
                 $printableArgs = $this->commandInputToText($commandInput[$host->name]);
                 if ($printableArgs === '') {
                     $printableArgs = 'with zero arguments';
@@ -112,7 +125,17 @@ class TaskRunner
 
         foreach ($items as $item) {
             $variables['item'] = $item;
-            $commandInput = $this->prepareCommandInput($command, $task->getArguments(), $variables);
+            if (array_key_exists('use_legacy_templating', $variables) &&
+                $variables['use_legacy_templating'] === true
+            ) {
+                $commandInput = $this
+                    ->legacyPrepareCommandInput($command, $task->getArguments(), $variables)
+                ;
+            } else {
+                $commandInput = $this
+                    ->prepareCommandInput($command, $task->getArguments(), $variables)
+                ;
+            }
             $this->output->writeln(
                 sprintf(
                     '<comment>%s `%s`</comment>: <info>%s</info> %s <comment>locally</comment>',
@@ -410,22 +433,115 @@ class TaskRunner
         }
 
         // Variable substitution in arguments
+        $templates = array();
+        $fileArgs = array();
+        $fileTemplates = array();
+        // register potential placeholders with the tranformer
         foreach ($arguments as $name => $value) {
             if (! is_string($value) || empty($value)) {
                 continue;
             }
-            $value = $this->transformer->transformVariable($value, $variables);
+            $templates[$name] = $value;
+        }
+        // first pass: replace placeholders with concrete values
+        $this->transformer->addTemplates($templates);
+        foreach ($templates as $name => $_) {
+            $arguments[$name] = $this->transformer->transformVariable($name, $variables);
+        }
+        // second pass: replace @filepath with file content
+        foreach ($arguments as $name => $value) {
+            if ($value[0] != '@') {
+                continue;
+            }
+            if (substr($value, -5) === '.twig' || substr($value, -9) === '.template') {
+                // it's a file template to be rendered in the next pass
+                $fileTemplates[$name] = $this->transformer->transformFile(substr($value, 1));
+            } else {
+                // it's a normal file
+                $fileArgs[$name] = $this->transformer->transformFile(substr($value, 1));
+            }
+        }
+        // third pass: transform file templates
+        $this->transformer->addTemplates($fileTemplates);
+        foreach ($fileTemplates as $name => $_) {
+            $fileArgs[$name] = $this->transformer->transformVariable($name, $variables);
+        }
+        // final pass: transform file content into data streams
+        foreach ($fileArgs as $name => $fileContent) {
+            $arguments[$name] = $this->transformer->transformDataStream($fileContent);
+        }
+
+        $inputs = [];
+        $arguments['command'] = $command->getName();
+
+        $definition = $command->getDefinition();
+
+        foreach ($definition->getArguments() as $argument) {
+            $name = $argument->getName();
+            if (isset($arguments[$name])) {
+                $inputs[$name] = $arguments[$name];
+            } elseif ($argument->isRequired()) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Missing required argument "%s" for command "%s".',
+                        $name,
+                        $command->getName()
+                    )
+                );
+            }
+        }
+
+        foreach ($definition->getOptions() as $option) {
+            $name = $option->getName();
+            if (! array_key_exists($name, $arguments)) {
+                continue;
+            }
+            $inputs['--' . $name] = $arguments[$name];
+        }
+
+        $commandInput = new ArrayInput($inputs, $definition);
+        return $commandInput;
+    }
+
+    public function legacyPrepareCommandInput(Command $command, $arguments, $variables)
+    {
+        if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+            $variableString = '';
+            foreach ($variables as $name => $value) {
+                switch (gettype($value)) {
+                    case 'string':
+                        $valueText = $value;
+                        break;
+                    case 'array':
+                        $valueText = json_encode($value);
+                        break;
+                    default:
+                        $valueText = '{' . gettype($value) . '}';
+                }
+                $variableString .= ' ' . $name . '=`<info>' . $valueText . '</info>`';
+            }
+            $this->output->writeln(
+                "<comment> * TASK " . $command->getName() ."</comment> " . trim($variableString) . "</comment>"
+            );
+        }
+
+        // Variable substitution in arguments
+        foreach ($arguments as $name => $value) {
+            if (! is_string($value) || empty($value)) {
+                continue;
+            }
+            $value = $this->legacyTransformer->transformVariable($value, $variables);
             if (! is_string($value) || empty($value)) {
                 $arguments[$name] = $value;
                 continue;
             }
             if ($value[0] == '@') {
-                $fileContent = $this->transformer->transformFile(substr($value, 1));
-                $value = $this->transformer->transformDataStream($fileContent);
+                $fileContent = $this->legacyTransformer->transformFile(substr($value, 1));
+                $value = $this->legacyTransformer->transformDataStream($fileContent);
             } elseif ($value[0] == '!') {
-                $templateContent = $this->transformer->transformFile(substr($value, 1));
-                $content = $this->transformer->transformVariable($templateContent, $variables);
-                $value = $this->transformer->transformDataStream($content);
+                $templateContent = $this->legacyTransformer->transformFile(substr($value, 1));
+                $content = $this->legacyTransformer->transformVariable($templateContent, $variables);
+                $value = $this->legacyTransformer->transformDataStream($content);
             }
             $arguments[$name] = $value;
         }

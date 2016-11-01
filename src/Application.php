@@ -20,6 +20,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Twig_Environment;
+use Twig_Loader_Array;
 
 use Droid\Command\TargetRunCommand;
 use Droid\Loader\YamlLoader;
@@ -28,6 +30,7 @@ use Droid\Transform\DataStreamTransformer;
 use Droid\Transform\FileTransformer;
 use Droid\Transform\InventoryTransformer;
 use Droid\Transform\Render\LightnCandyRenderer;
+use Droid\Transform\Render\TwigRenderer;
 use Droid\Transform\SubstitutionTransformer;
 use Droid\Transform\Transformer;
 
@@ -197,7 +200,8 @@ class Application extends ConsoleApplication
                 $this,
                 $this->transformer,
                 new LoggerFactory,
-                new ExpressionLanguage
+                new ExpressionLanguage,
+                $this->buildLegacyTransformer()
             );
             $enabler = $this->configureHostEnabler();
             if (! $enabler) {
@@ -297,6 +301,19 @@ class Application extends ConsoleApplication
         return $candidatePath;
     }
 
+    protected function buildLegacyTransformer()
+    {
+        return new Transformer(
+            new DataStreamTransformer,
+            new FileTransformer,
+            new InventoryTransformer(
+                $this->inventory,
+                PropertyAccess::createPropertyAccessor()
+            ),
+            new SubstitutionTransformer(new LightnCandyRenderer)
+        );
+    }
+
     protected function buildTransformer()
     {
         return new Transformer(
@@ -306,8 +323,21 @@ class Application extends ConsoleApplication
                 $this->inventory,
                 PropertyAccess::createPropertyAccessor()
             ),
-            new SubstitutionTransformer(
-                new LightnCandyRenderer
+            new SubstitutionTransformer($this->buildTemplateRenderer())
+        );
+    }
+
+    protected function buildTemplateRenderer()
+    {
+        return new TwigRenderer(
+            new Twig_Environment(
+                new Twig_Loader_Array(array()),
+                array(
+                    'charset' => 'utf-8',
+                    'cache' => false,
+                    'strict_variables' => true,
+                    'autoescape' => false,
+                )
             )
         );
     }

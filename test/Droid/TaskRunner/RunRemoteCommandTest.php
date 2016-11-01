@@ -104,7 +104,8 @@ class RunRemoteCommandTest extends AutoloaderAwareTestCase
             $this->app,
             $this->transformer,
             $this->loggerFac,
-            $this->expr
+            $this->expr,
+            $this->transformer
         );
         $this
             ->taskRunner
