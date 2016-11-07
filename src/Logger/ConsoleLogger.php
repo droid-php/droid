@@ -92,7 +92,7 @@ class ConsoleLogger extends AbstractLogger
             } else {
                 $output->writeln(
                     sprintf(
-                        '<%1$s><wu-tang>Bring da ruckus</> %2$s</%1$s>',
+                        '<%1$s>%2$s</%1$s>',
                         $this->formatLevelMap[$level],
                         $this->interpolate($message, $context)
                     )
