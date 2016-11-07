@@ -81,7 +81,15 @@ EOT;
 
         $data = [];
         $data['name'] = $name;
-        $data['classname'] = ucfirst($name);
+        $data['classname'] = implode(
+            '',
+            array_map(
+                function ($x) {
+                    return ucfirst($x);
+                },
+                preg_split('/[_-]+/', $name, null, PREG_SPLIT_NO_EMPTY)
+            )
+        );
 
         $this->pluginGen->setLogger($this->loggerFac->makeLogger($output));
         $this->pluginGen->generate(__DIR__ . '/../../generator/plugin', $basePath, $data);

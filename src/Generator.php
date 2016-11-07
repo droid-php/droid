@@ -39,6 +39,17 @@ class Generator
 
             $content = $this->processContent(file_get_contents($file), $data);
 
+            // do any rename operations
+            //
+            // rename Droid*Command.php to match the class name
+            $m = [];
+            if (array_key_exists('classname', $data)
+                && preg_match('/Droid(\w*)Command.php/', $filename, $m)
+            ) {
+                $filename = sprintf('%s%sCommand.php', $data['classname'], $m[1]);
+                $writePath = $dest . DIRECTORY_SEPARATOR . $relDir . $filename;
+            }
+
             $this->logInfo(sprintf('Writing "%s"', $relDir . $filename));
 
             file_put_contents($writePath, $content);
