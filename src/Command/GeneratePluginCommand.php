@@ -11,9 +11,23 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Generator;
+use Droid\Logger\LoggerFactory;
 
 class GeneratePluginCommand extends Command
 {
+    private $loggerFac;
+    private $pluginGen;
+
+    public function __construct(
+        Generator $pluginGenerator,
+        LoggerFactory $loggerFactory,
+        $name = null
+    ) {
+        $this->pluginGen = $pluginGenerator;
+        $this->loggerFac = $loggerFactory;
+        parent::__construct($name);
+    }
+
     public function configure()
     {
         $help = <<<'EOT'
@@ -69,7 +83,7 @@ EOT;
         $data['name'] = $name;
         $data['classname'] = ucfirst($name);
 
-        $generator = new Generator();
-        $generator->generate(__DIR__ . '/../../generator/plugin', $basePath, $data);
+        $this->pluginGen->setLogger($this->loggerFac->makeLogger($output));
+        $this->pluginGen->generate(__DIR__ . '/../../generator/plugin', $basePath, $data);
     }
 }

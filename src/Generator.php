@@ -6,6 +6,8 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 
+use Psr\Log\LoggerInterface;
+
 class Generator
 {
     public function generate($src, $dest, $data = [])
@@ -37,7 +39,7 @@ class Generator
 
             $content = $this->processContent(file_get_contents($file), $data);
 
-            echo "FILE: " . $relDir . $filename . "\n";
+            $this->logInfo(sprintf('Writing "%s"', $relDir . $filename));
 
             file_put_contents($writePath, $content);
         }
@@ -49,5 +51,18 @@ class Generator
             $content = str_replace('{{'  . $key . '}}', $value, $content);
         }
         return $content;
+    }
+
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    private function logInfo($message)
+    {
+        if (! $this->logger) {
+            return;
+        }
+        $this->logger->info($message);
     }
 }
