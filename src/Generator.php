@@ -2,9 +2,9 @@
 
 namespace Droid;
 
-use RuntimeException;
-use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use RuntimeException;
 
 class Generator
 {
@@ -16,26 +16,33 @@ class Generator
         if (!file_exists($dest)) {
             throw new RuntimeException("Destination directory does not exist: " . $dest);
         }
-        
-        $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($src));
-        
+
+        $rii = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
         foreach ($rii as $file) {
-            $path = substr($file->getPathname(), strlen($src) + 1);
+
+            $filename = $file->getFilename();
+            $relDir = substr($file->getPathname(), strlen($src)+1, 0-strlen($filename));
+            $writePath = $dest . DIRECTORY_SEPARATOR . $relDir . $filename;
+
             if ($file->isDir()) {
-                $path = rtrim($path, '.');
-                if (!file_exists($dest . '/' . $path)) {
-                    mkdir($dest . '/' . $path);
+                if (! file_exists($writePath)) {
+                    mkdir($writePath);
                 }
                 continue;
             }
-            echo "FILE: " . $path . "\n";
-            $content = file_get_contents($src . '/' . $path);
-            $content = $this->processContent($content, $data);
-            file_put_contents($dest . '/' . $path, $content);
-        }
 
+            $content = $this->processContent(file_get_contents($file), $data);
+
+            echo "FILE: " . $relDir . $filename . "\n";
+
+            file_put_contents($writePath, $content);
+        }
     }
-    
+
     public function processContent($content, $data = [])
     {
         foreach ($data as $key => $value) {

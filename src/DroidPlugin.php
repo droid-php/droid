@@ -8,7 +8,7 @@ class DroidPlugin
     {
         $this->droid = $droid;
     }
-    
+
     public function getCommands()
     {
         $commands = [];
