@@ -17,10 +17,12 @@ use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Droid\Command\TargetRunCommand;
+use Droid\Command\BaseTargetCommand;
 use Droid\Loader\YamlLoader;
 use Droid\Logger\LoggerFactory;
 use Droid\Transform\DataStreamTransformer;
@@ -204,11 +206,24 @@ class Application extends ConsoleApplication
                 $runner->setEnabler($enabler);
             }
             foreach ($this->getProject()->getTargets() as $target) {
-                $command = new TargetRunCommand;
+                $command = new BaseTargetCommand;
                 $command->setName($target->getName());
                 $command->setDescription("Run target: " . $target->getName());
                 $command->setTarget($target->getName());
                 $command->setTaskRunner($runner);
+                foreach ($target->getArguments() as $argument) {
+
+                    $required = InputArgument::OPTIONAL;
+                    if ($argument->getRequired()) {
+                        $required = InputArgument::REQUIRED;
+                    }
+
+                    $command->addArgument(
+                        $argument->getName(),
+                        $required,
+                        $argument->getDescription()
+                    );
+                }
                 $this->add($command);
             }
         }

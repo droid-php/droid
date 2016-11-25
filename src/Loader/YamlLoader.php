@@ -13,6 +13,7 @@ use Droid\Model\Project\Environment;
 use Droid\Model\Project\Module;
 use Droid\Model\Project\Project;
 use Droid\Model\Project\Target;
+use Droid\Model\Project\TargetArgument;
 use Droid\Model\Project\Task;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Parser as YamlParser;
@@ -159,6 +160,19 @@ class YamlLoader
                     foreach ($targetNode['modules'] as $moduleName) {
                         $module = $project->getModule($moduleName);
                         $target->addModule($module);
+                    }
+                }
+                
+                if (isset($targetNode['arguments'])) {
+                    foreach ($targetNode['arguments'] as $argumentName => $argumentData) {
+                        $argument = new TargetArgument($argumentName);
+                        if (isset($argumentData['description'])) {
+                            $argument->setDescription($argumentData['description']);
+                        }
+                        if (isset($argumentData['required'])) {
+                            $argument->setRequired($argumentData['required']);
+                        }
+                        $target->addArgument($argument);
                     }
                 }
                 $this->loadTasks($targetNode, $target, 'tasks');
