@@ -3,6 +3,8 @@
 
 use Droid\Application;
 
+error_reporting(E_ALL & ~E_NOTICE); // workaround: droid-php/droid/issues/25
+
 $loader = null;
 $projectDir = null;
 
