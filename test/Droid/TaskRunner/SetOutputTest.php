@@ -5,6 +5,7 @@ namespace Droid\Test\TaskRunner;
 use Droid\Model\Inventory\Remote\Enabler;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
@@ -16,6 +17,7 @@ class SetOutputTest extends AutoloaderAwareTestCase
 {
     private $app;
     private $enabler;
+    private $expr;
     private $logger;
     private $loggerFac;
     private $output;
@@ -43,6 +45,10 @@ class SetOutputTest extends AutoloaderAwareTestCase
             ->getMockBuilder(LoggerFactory::class)
             ->getMock()
         ;
+        $this->expr = $this
+            ->getMockBuilder(ExpressionLanguage::class)
+            ->getMock()
+        ;
         $this->output = $this
             ->getMockBuilder(OutputInterface::class)
             ->getMock()
@@ -55,7 +61,9 @@ class SetOutputTest extends AutoloaderAwareTestCase
         $this->taskRunner = new TaskRunner(
             $this->app,
             $this->transformer,
-            $this->loggerFac
+            $this->loggerFac,
+            $this->expr,
+            $this->transformer
         );
         $this
             ->taskRunner

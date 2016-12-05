@@ -10,18 +10,21 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
 use Droid\TaskRunner;
 use Droid\Test\AutoloaderAwareTestCase;
 use Droid\Transform\Transformer;
+use Droid\Transform\SubstitutionTransformer;
 
 class RunTaskRemotelyTest extends AutoloaderAwareTestCase
 {
     private $app;
     private $command;
     private $enabler;
+    private $expr;
     private $host;
     private $inventory;
     private $logger;
@@ -57,6 +60,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
             ->getMockBuilder(LoggerFactory::class)
             ->getMock()
         ;
+        $this->expr = new ExpressionLanguage;;
         $this
             ->loggerFac
             ->method('makeLogger')
@@ -70,10 +74,20 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
             ->getMockBuilder(Task::class)
             ->getMock()
         ;
+        $this->substitutionTransformer = $this
+            ->getMockBuilder(SubstitutionTransformer::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+        ;
         $this->transformer = $this
             ->getMockBuilder(Transformer::class)
             ->disableOriginalConstructor()
             ->getMock()
+        ;
+        $this
+            ->transformer
+            ->method('getSubstitutionTransformer')
+            ->willReturn($this->substitutionTransformer)
         ;
         $this->taskRunner = $this->getPartialMockTaskRunner();
     }
@@ -98,7 +112,7 @@ class RunTaskRemotelyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer, $this->loggerFac)
+                array($this->app, $this->transformer, $this->loggerFac, $this->expr, $this->transformer)
             )
             ->setMethods(
                 array(

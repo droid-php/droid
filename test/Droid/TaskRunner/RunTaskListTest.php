@@ -11,6 +11,7 @@ use Droid\Model\Project\Target;
 use Droid\Model\Project\Task;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
@@ -22,6 +23,7 @@ class RunTaskListTest extends AutoloaderAwareTestCase
 {
     private $app;
     private $enabler;
+    private $expr;
     private $host;
     private $inventory;
     private $logger;
@@ -62,6 +64,10 @@ class RunTaskListTest extends AutoloaderAwareTestCase
             ->getMockBuilder(LoggerFactory::class)
             ->getMock()
         ;
+        $this->expr = $this
+            ->getMockBuilder(ExpressionLanguage::class)
+            ->getMock()
+        ;
         $this
             ->loggerFac
             ->method('makeLogger')
@@ -88,7 +94,7 @@ class RunTaskListTest extends AutoloaderAwareTestCase
         $this->taskRunner = $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer, $this->loggerFac)
+                array($this->app, $this->transformer, $this->loggerFac, $this->expr, $this->transformer)
             )
             ->setMethods(array('runTaskRemotely', 'runTaskLocally'))
             ->getMock()

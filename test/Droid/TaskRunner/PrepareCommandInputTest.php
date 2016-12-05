@@ -8,6 +8,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
@@ -21,6 +22,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
     private $app;
     private $command;
     private $enabler;
+    private $expr;
     private $logger;
     private $loggerFac;
     private $output;
@@ -53,6 +55,10 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
             ->getMockBuilder(LoggerFactory::class)
             ->getMock()
         ;
+        $this->expr = $this
+            ->getMockBuilder(ExpressionLanguage::class)
+            ->getMock()
+        ;
         $this
             ->loggerFac
             ->method('makeLogger')
@@ -61,7 +67,9 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         $this->taskRunner = new TaskRunner(
             $this->app,
             $this->transformer,
-            $this->loggerFac
+            $this->loggerFac,
+            $this->expr,
+            $this->transformer
         );
         $this
             ->taskRunner
@@ -103,7 +111,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         ;
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $argumentValue),
                 $variables
@@ -123,7 +131,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
         ;
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $argumentValue),
                 $variables
@@ -170,7 +178,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
 
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $inputToMethod),
                 $variables
@@ -226,7 +234,7 @@ class PrepareCommandInputTest extends AutoloaderAwareTestCase
 
         $this
             ->taskRunner
-            ->prepareCommandInput(
+            ->legacyPrepareCommandInput(
                 $this->command,
                 array('what' => $inputToMethod),
                 $variables

@@ -16,6 +16,16 @@ class SubstitutionTransformer implements TransformerInterface
         $this->renderer = $renderer;
     }
 
+    /**
+     * Add templates, as a map of name to template, to the template renderer.
+     *
+     * @param array $templates
+     */
+    public function addTemplates($templates)
+    {
+        $this->renderer->addTemplates($templates);
+    }
+
     public function transform($value, $context = array())
     {
         if (! is_string($value)) {

@@ -119,4 +119,17 @@ class Transformer
 
         return $result;
     }
+
+    /**
+     * Add templates to the substitution transformer.
+     *
+     * Each entry in the supplied array of templates should be the string
+     * template content, keyed by the name used to look up the template.
+     *
+     * @param array $templates
+     */
+    public function addTemplates($templates)
+    {
+        $this->substitutionTransformer->addTemplates($templates);
+    }
 }

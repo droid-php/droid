@@ -10,6 +10,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 use Droid\Application;
 use Droid\Logger\LoggerFactory;
@@ -22,6 +23,7 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
     private $app;
     private $command;
     private $enabler;
+    private $expr;
     private $host;
     private $inventory;
     private $logger;
@@ -55,6 +57,10 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
         ;
         $this->loggerFac = $this
             ->getMockBuilder(LoggerFactory::class)
+            ->getMock()
+        ;
+        $this->expr = $this
+            ->getMockBuilder(ExpressionLanguage::class)
             ->getMock()
         ;
         $this
@@ -104,7 +110,7 @@ class RunTaskLocallyTest extends AutoloaderAwareTestCase
         return $this
             ->getMockBuilder(TaskRunner::class)
             ->setConstructorArgs(
-                array($this->app, $this->transformer, $this->loggerFac)
+                array($this->app, $this->transformer, $this->loggerFac, $this->expr, $this->transformer)
             )
             ->setMethods(
                 array(
