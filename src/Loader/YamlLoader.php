@@ -265,6 +265,9 @@ class YamlLoader
             if (isset($ruleData['action'])) {
                 $rule->setAction($ruleData['action']);
             }
+            if (isset($ruleData['custom'])) {
+                $rule->setCustom($ruleData['custom']);
+            }
             $obj->addRule($rule);
         }
     }
